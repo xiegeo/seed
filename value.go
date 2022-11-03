@@ -5,6 +5,8 @@ import (
 	"time"
 
 	"github.com/shopspring/decimal"
+
+	"github.com/xiegeo/seed/seederrors"
 )
 
 type ObjectValue struct {
@@ -22,13 +24,6 @@ type ReferenceValue struct {
 }
 
 type SetFieldOption struct{}
-
-/*
-func (ob *ObjectValue) SetField(field *Field, value any, opt *SetFieldOption) error {
-	// todo: use opt to optionally verify or transform value
-	ob.Fields[field.Name] = FieldValue{value: value}
-	return nil
-}*/
 
 type FieldValueType interface {
 	string | *string | I18n[string] | // String FieldType
@@ -52,12 +47,12 @@ func GetField[T FieldValueType](ob *ObjectValue, field *Field) (T, error) {
 	var vt T //nolint:varnamelen
 	v, ok := ob.Fields[field.Name]
 	if !ok {
-		return vt, NewFieldNotFoundError(field.Name)
+		return vt, seederrors.NewFieldNotFoundError(field.Name)
 	}
 	vt, ok = v.value.(T)
 	if ok { // fast pass
 		return vt, nil
 	}
 	// todo: support type conversion
-	return vt, NewTargetValueTypeNotSupportedError(field.Name, v, vt)
+	return vt, seederrors.NewTargetValueTypeNotSupportedError(field.Name, v, vt)
 }

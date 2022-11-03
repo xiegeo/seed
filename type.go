@@ -3,8 +3,6 @@ package seed
 import (
 	"math/big"
 	"time"
-
-	"golang.org/x/text/language"
 )
 
 // Thing is a base type for anything that can be identified.
@@ -15,6 +13,10 @@ type Thing struct {
 }
 
 type CodeName string
+
+func (c CodeName) String() string {
+	return string(c)
+}
 
 // Domain holds a collection of objects, equivalent to a SQL database.
 // Only one Domain is needed for most use cases.
@@ -37,9 +39,6 @@ type Field struct {
 	IsNullable bool // if true, difference between null and zero values are significate.
 }
 
-// I18n[T any] is used for internationalization, such as text and icons displayed to users.
-type I18n[T any] map[language.Tag]T
-
 type FieldType int8
 
 const (
@@ -59,8 +58,8 @@ const (
 		String      *StringSetting
 		Binary      *BinarySetting
 		Boolean     *BooleanSetting
-	    TimeStamp    *TimeStampSetting
-		Integer    *IntegerSetting
+	    TimeStamp   *TimeStampSetting
+		Integer     *IntegerSetting
 		Real        *RealSetting
 		Reference   *ReferenceSetting
 		List        *ListSetting
