@@ -13,7 +13,7 @@ import (
 type I18n[T any] map[language.Tag]T
 
 func (n I18n[T]) GetValue(p *Picker, fallback T) T {
-	lang, _ := Pick[T](p, n)
+	lang, _ := Pick(p, n)
 	v, ok := n[lang]
 	if ok {
 		return v

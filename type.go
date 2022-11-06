@@ -1,9 +1,12 @@
 package seed
 
 import (
+	"fmt"
 	"math/big"
 	"time"
 )
+
+type CodeName string
 
 // Thing is a base type for anything that can be identified.
 type Thing struct {
@@ -12,37 +15,34 @@ type Thing struct {
 	Discription I18n[string]
 }
 
-type CodeName string
-
-func (c CodeName) String() string {
-	return string(c)
-}
-
 // Domain holds a collection of objects, equivalent to a SQL database.
 // Only one Domain is needed for most use cases.
 type Domain struct {
 	Thing
-	Objects []*Object
+	Objects []Object
 }
 
 type Object struct {
 	Thing
-	Fields     []*Field
-	SubObjects []CodeName // Name of objects that supports all the fields. Mirrors subclass/implements by in OO.
+	Fields []Field
+
+	// some form of class grouping can be useful, but not sure how to accomplish it yet.
+	// SubObjects []CodeName // Name of objects that supports all the fields. Mirrors subclass/implements by in OO.
 }
 
 type Field struct {
 	Thing
 	FieldType
 	FieldTypeSetting
-	IsI18n     bool // if true, different values for different locals is possible. Only String and Binary need to be supported.
-	IsNullable bool // if true, difference between null and zero values are significate.
+	IsI18n   bool // if true, different values for different locals is possible. Only String and Binary need to be supported.
+	Nullable bool // if true, difference between null and zero values are significate.
 }
 
 type FieldType int8
 
 const (
-	String FieldType = iota + 1
+	FieldTypeUnset FieldType = iota
+	String
 	Binary
 	Boolean
 	TimeStamp
@@ -51,19 +51,34 @@ const (
 	Reference
 	List
 	Combination
+	FieldTypeMax = Combination
 )
 
+var _fieldTypeStringer = []string{"FieldTypeUnset", "String", "Binary", "Boolean", "TimeStamp", "Integer", "Real", "Reference", "List", "Combination"}
+
+func (f FieldType) String() string {
+	if f < 0 || f > FieldTypeMax {
+		return fmt.Sprintf("FieldType(%d) out of range[%d,%d]", f, FieldTypeUnset, FieldTypeMax)
+	}
+	return _fieldTypeStringer[f]
+}
+
+func (f FieldType) Valid() bool {
+	return f <= FieldTypeUnset || f > FieldTypeMax
+}
+
 /*
-	 FieldTypeSetting is any of
-		String      *StringSetting
-		Binary      *BinarySetting
-		Boolean     *BooleanSetting
-	    TimeStamp   *TimeStampSetting
-		Integer     *IntegerSetting
-		Real        *RealSetting
-		Reference   *ReferenceSetting
-		List        *ListSetting
-		Combination *CombinationSetting
+FieldTypeSetting is any of:
+
+		String      StringSetting
+		Binary      BinarySetting
+		Boolean     BooleanSetting
+	    TimeStamp   TimeStampSetting
+		Integer     IntegerSetting
+		Real        RealSetting
+		Reference   ReferenceSetting
+		List        ListSetting
+		Combination CombinationSetting
 */
 type FieldTypeSetting any
 
@@ -96,19 +111,21 @@ type Unit struct {
 }
 
 type RealSetting struct {
-	Standered   RealStandered
+	Standard    RealStandard
 	MinMantissa *big.Int
 	MaxMantissa *big.Int
 	Base        *uint8
 	MinExponent *int64
 	MaxExponent *int64
+	MinFloat    *float64
+	MaxFloat    *float64
 	Unit        *Unit
 }
 
-type RealStandered int8
+type RealStandard int8
 
 const (
-	CustomReal RealStandered = iota
+	CustomReal RealStandard = iota
 	Float32
 	Float64
 	Decimal32
@@ -139,5 +156,5 @@ type ListSetting struct {
 }
 
 type CombinationSetting struct {
-	Fields []*Field
+	Fields []Field
 }

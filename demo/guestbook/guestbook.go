@@ -14,12 +14,12 @@ func Domain() seed.Domain {
 		Thing: seed.Thing{
 			Name: "guestbook",
 		},
-		Objects: []*seed.Object{
+		Objects: []seed.Object{
 			{
 				Thing: seed.Thing{
 					Name: "guest",
 				},
-				Fields: []*seed.Field{
+				Fields: []seed.Field{
 					TimeField(),
 					NameField(),
 					EventsField(),
@@ -31,7 +31,7 @@ func Domain() seed.Domain {
 				Thing: seed.Thing{
 					Name: "event",
 				},
-				Fields: []*seed.Field{
+				Fields: []seed.Field{
 					StartTimeField(),
 					EndTimeField(),
 					EventNameField(),
@@ -44,8 +44,8 @@ func Domain() seed.Domain {
 	}
 }
 
-func NameField() *seed.Field {
-	return &seed.Field{
+func NameField() seed.Field {
+	return seed.Field{
 		Thing: seed.Thing{
 			Name: "name",
 			Label: seed.I18n[string]{
@@ -61,7 +61,7 @@ func NameField() *seed.Field {
 	}
 }
 
-func EventNameField() *seed.Field {
+func EventNameField() seed.Field {
 	f := NameField()
 	f.Label = seed.I18n[string]{
 		language.English: "Event Name",
@@ -71,8 +71,8 @@ func EventNameField() *seed.Field {
 	return f
 }
 
-func NumberOfGuestsField() *seed.Field {
-	return &seed.Field{
+func NumberOfGuestsField() seed.Field {
+	return seed.Field{
 		Thing: seed.Thing{
 			Name: "number_of_guests",
 			Label: seed.I18n[string]{
@@ -88,7 +88,7 @@ func NumberOfGuestsField() *seed.Field {
 	}
 }
 
-func MaxNumberOfGuestsField() *seed.Field {
+func MaxNumberOfGuestsField() seed.Field {
 	f := NumberOfGuestsField()
 	f.Name = "max_number_of_guests"
 	f.Label = seed.I18n[string]{
@@ -102,8 +102,8 @@ func MaxNumberOfGuestsField() *seed.Field {
 	return f
 }
 
-func TimeField() *seed.Field {
-	return &seed.Field{
+func TimeField() seed.Field {
+	return seed.Field{
 		Thing: seed.Thing{
 			Name: "time",
 			Label: seed.I18n[string]{
@@ -120,7 +120,7 @@ func TimeField() *seed.Field {
 	}
 }
 
-func StartTimeField() *seed.Field {
+func StartTimeField() seed.Field {
 	f := TimeField()
 	f.Name = "start_time"
 	f.Label = seed.I18n[string]{
@@ -135,7 +135,7 @@ func StartTimeField() *seed.Field {
 	return f
 }
 
-func EndTimeField() *seed.Field {
+func EndTimeField() seed.Field {
 	f := StartTimeField()
 	f.Name = "end_time"
 	f.Label = seed.I18n[string]{
@@ -145,8 +145,8 @@ func EndTimeField() *seed.Field {
 	return f
 }
 
-func ContactField() *seed.Field {
-	return &seed.Field{
+func ContactField() seed.Field {
+	return seed.Field{
 		Thing: seed.Thing{
 			Name: "contact",
 			Label: seed.I18n[string]{
@@ -156,7 +156,7 @@ func ContactField() *seed.Field {
 		},
 		FieldType: seed.Combination,
 		FieldTypeSetting: seed.CombinationSetting{
-			Fields: []*seed.Field{
+			Fields: []seed.Field{
 				PhoneNumberField(),
 				EmailField(),
 			},
@@ -164,8 +164,8 @@ func ContactField() *seed.Field {
 	}
 }
 
-func PhoneNumberField() *seed.Field {
-	return &seed.Field{
+func PhoneNumberField() seed.Field {
+	return seed.Field{
 		Thing: seed.Thing{
 			Name: "phone_number",
 			Label: seed.I18n[string]{
@@ -181,8 +181,8 @@ func PhoneNumberField() *seed.Field {
 	}
 }
 
-func EmailField() *seed.Field {
-	return &seed.Field{
+func EmailField() seed.Field {
+	return seed.Field{
 		Thing: seed.Thing{
 			Name: "email",
 			Label: seed.I18n[string]{
@@ -198,8 +198,8 @@ func EmailField() *seed.Field {
 	}
 }
 
-func NoteField() *seed.Field {
-	return &seed.Field{
+func NoteField() seed.Field {
+	return seed.Field{
 		Thing: seed.Thing{
 			Name: "note",
 			Label: seed.I18n[string]{
@@ -215,8 +215,8 @@ func NoteField() *seed.Field {
 	}
 }
 
-func EventDescriptionField() *seed.Field {
-	return &seed.Field{
+func EventDescriptionField() seed.Field {
+	return seed.Field{
 		Thing: seed.Thing{
 			Name: "description",
 			Label: seed.I18n[string]{
@@ -233,8 +233,8 @@ func EventDescriptionField() *seed.Field {
 	}
 }
 
-func EventsField() *seed.Field {
-	return &seed.Field{
+func EventsField() seed.Field {
+	return seed.Field{
 		Thing: seed.Thing{
 			Name: "events",
 			Label: seed.I18n[string]{
@@ -255,8 +255,8 @@ func EventsField() *seed.Field {
 	}
 }
 
-func PublishField() *seed.Field {
-	return &seed.Field{
+func PublishField() seed.Field {
+	return seed.Field{
 		Thing: seed.Thing{
 			Name: "publish",
 			Label: seed.I18n[string]{
