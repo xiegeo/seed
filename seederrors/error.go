@@ -81,7 +81,7 @@ type FieldNotSupportedError struct {
 	Path          []string // specify the specific metadata option that's not supported
 }
 
-func NewFieldNotSupportedError[S1, S2 anyString](fieldTypeName string, fieldName S1, vpath ...S2) FieldNotSupportedError {
+func NewFieldNotSupportedError[S1 anyString](fieldTypeName string, fieldName S1, vpath ...string) FieldNotSupportedError {
 	p := make([]string, 0, len(vpath))
 	for _, s := range vpath {
 		p = append(p, string(s))

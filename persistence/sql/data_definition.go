@@ -3,6 +3,7 @@ package sql
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/xiegeo/seed"
 	"github.com/xiegeo/seed/seederrors"
@@ -18,7 +19,7 @@ func (db *DB) AddDomain(ctx context.Context, d *seed.Domain) error {
 }
 
 func (db *DB) generateTableName(ctx context.Context, d *seed.Domain, ob *seed.Object) (string, error) {
-	return fmt.Sprint("%s_ob_%s", d.Name, ob.Name), nil
+	return fmt.Sprintf("%s_ob_%s", d.Name, ob.Name), nil
 }
 
 func (db *DB) createTable(txc txContext, d *seed.Domain, ob *seed.Object) (err error) {
@@ -28,21 +29,50 @@ func (db *DB) createTable(txc txContext, d *seed.Domain, ob *seed.Object) (err e
 	}
 	var preHooks, postHooks []func(tx UseTx) error
 	var fieldDefinitions []string
-	for _, field := range ob.Fields {
-		db.
+	for i := range ob.Fields {
+		f := &ob.Fields[i]
+		fd, err := db.option.FieldDefinition(f)
+		if err != nil {
+			return err
+		}
+		preHooks = append(preHooks, fd.PreHook)
+		fieldDefinitions = append(fieldDefinitions, fd.Fields...)
+		postHooks = append(postHooks, fd.PostHook)
 	}
+	for _, h := range preHooks {
+		if err := h(txc); err != nil {
+			return err
+		}
+	}
+	_, err = txc.Exec(fmt.Sprintf("create table %s (%s)", tableName, strings.Join(fieldDefinitions, ",")))
+	if err != nil {
+		return err
+	}
+	for _, h := range postHooks {
+		if err := h(txc); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // FieldsToSQL implements GetDefinition
 type FieldsToSQL struct {
-	I18N   *FieldsToSQL
-	ByType [seed.FieldTypeMax + 1]func(*seed.Field) (FieldDefinition, error)
+	Direct [seed.FieldTypeMax + 1]func(*seed.Field) (FieldDefinition, error)
+	I18N   [seed.FieldTypeMax + 1]func(*seed.Field) (FieldDefinition, error)
 }
 
 func (toSQL *FieldsToSQL) GetDefinition(f *seed.Field) (FieldDefinition, error) {
-	typed := toSQL.ByType[f.FieldType]
-	if typed == nil {
-		return  FieldDefinition{}, seederrors.NewFieldNotSupportedError(f.FieldType.String(),f.Name)
+	if toSQL == nil || !f.FieldType.Valid() {
+		return FieldDefinition{}, seederrors.NewFieldNotSupportedError(f.FieldType.String(), f.Name)
 	}
-
+	var typed func(*seed.Field) (FieldDefinition, error)
+	if f.IsI18n {
+		typed = toSQL.I18N[f.FieldType]
+	}
+	typed = toSQL.Direct[f.FieldType]
+	if typed == nil {
+		return FieldDefinition{}, seederrors.NewFieldNotSupportedError(f.FieldType.String(), f.Name, fmt.Sprint(f.IsI18n), "IsI18n")
+	}
+	return typed(f)
 }

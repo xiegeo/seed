@@ -1,7 +1,6 @@
 package sql
 
 import (
-	"context"
 	"database/sql"
 	"regexp"
 	"strconv"
@@ -26,9 +25,9 @@ type DBOption struct {
 // FieldDefinition list 0 to many Fields.
 // Use hooks to apply additional operations outside field definition.
 type FieldDefinition struct {
-	PreHook   func(tx UseTx) error // dialect specific pre-hock, such as preparing helper tables
-	Fields    []string             // dialect specific field definition
-	AfterHook func(tx UseTx) error // dialect specific post-hook
+	PreHook  func(tx UseTx) error // dialect specific pre-hock, such as preparing helper tables
+	Fields   []string             // dialect specific field definition
+	PostHook func(tx UseTx) error // dialect specific post-hook
 }
 
 func newDefaultOption() *DBOption {
