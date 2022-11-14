@@ -56,6 +56,7 @@ var (
 	_systemLogPickerInitErrors []error
 )
 
+// SystemLogPicker picks the language based on the configuration of the local environment.
 func SystemLogPicker() *Picker {
 	_systemLogPickerOnce.Do(func() {
 		// get the system locales from the current user environment.
@@ -78,7 +79,7 @@ func SystemLogPicker() *Picker {
 	return _systemLogPicker
 }
 
-var _lastPicker *Picker
+var _lastPicker *Picker // picker of last resort, used as the last fallback picker
 
 func init() {
 	_lastPicker = NewPicker([]language.Tag{language.English}, nil)
@@ -110,7 +111,7 @@ func Pick[T any](p *Picker, values I18n[T]) (language.Tag, bool) {
 		}
 	}
 	if p.fallback != nil && bestOrder.confidence == language.No {
-		return Pick[T](p.fallback, values)
+		return Pick(p.fallback, values)
 	}
 	return bestTag, bestOrder.confidence > 0
 }

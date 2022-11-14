@@ -20,6 +20,7 @@ type DB struct {
 type DBOption struct {
 	TranslateStatement func(string) string // translate ? in statements to a format the database understands.
 	FieldDefinition    func(*seed.Field) (FieldDefinition, error)
+	TableDefinition    func(*seed.Object) (ObjectDefinition, error)
 }
 
 // FieldDefinition list 0 to many Fields.
@@ -27,6 +28,12 @@ type DBOption struct {
 type FieldDefinition struct {
 	PreHook  func(tx UseTx) error // dialect specific pre-hock, such as preparing helper tables
 	Fields   []string             // dialect specific field definition
+	PostHook func(tx UseTx) error // dialect specific post-hook
+}
+
+type ObjectDefinition struct {
+	PreHook  func(tx UseTx) error // dialect specific pre-hock
+	Option   string               // dialect specific table options, concatenated into a single string
 	PostHook func(tx UseTx) error // dialect specific post-hook
 }
 

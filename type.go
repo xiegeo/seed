@@ -10,9 +10,9 @@ type CodeName string
 
 // Thing is a base type for anything that can be identified.
 type Thing struct {
-	Name        CodeName // name is the long term api name of the thing, name is locally unique.
-	Label       I18n[string]
-	Discription I18n[string]
+	Name        CodeName     // name is the long term api name of the thing, name is locally unique.
+	Label       I18n[string] // used for input label or column header
+	Discription I18n[string] // addition information
 }
 
 // Domain holds a collection of objects, equivalent to a SQL database.
@@ -24,10 +24,17 @@ type Domain struct {
 
 type Object struct {
 	Thing
-	Fields []Field
+	FieldProperties
 
 	// some form of class grouping can be useful, but not sure how to accomplish it yet.
 	// SubObjects []CodeName // Name of objects that supports all the fields. Mirrors subclass/implements by in OO.
+}
+
+// FieldProperties describe a collection of fields.
+type FieldProperties struct {
+	Fields     []Field    // List each fields. The ordering of fields is not relevant for behavior.
+	Identities []Identity // required for object definitions and CombinationSetting on fields referred to in identity.
+	Ranges     []Range    // if any ranges is left out of identities, it can be described here.
 }
 
 type Field struct {
@@ -94,9 +101,9 @@ type BinarySetting struct {
 type BooleanSetting struct{}
 
 type TimeStampSetting struct {
-	Min      time.Time
-	Max      time.Time
-	Accuracy time.Duration // >= 24h: date only; >= 1s datetime
+	Min   time.Time
+	Max   time.Time
+	Scale time.Duration // >= 24h: date only; >= 1s datetime
 }
 
 type IntegerSetting struct {
@@ -107,17 +114,17 @@ type IntegerSetting struct {
 
 type Unit struct {
 	Thing
-	Symble string
+	Symble string // a display symbol, such as: %, °C
 }
 
 type RealSetting struct {
 	Standard    RealStandard
 	MinMantissa *big.Int
 	MaxMantissa *big.Int
-	Base        *uint8
+	Base        *uint8 // base 2 and 10 are most common, others are unlikely to be supported.
 	MinExponent *int64
 	MaxExponent *int64
-	MinFloat    *float64
+	MinFloat    *float64 // alternative settings for RealStandard of Float32 or Float64 to replace *Mantissa and *Exponent
 	MaxFloat    *float64
 	Unit        *Unit
 }
@@ -155,6 +162,37 @@ type ListSetting struct {
 	// IsNullable      bool // if true, list include null elements.
 }
 
-type CombinationSetting struct {
-	Fields []Field
+type CombinationSetting FieldProperties // Reuse FieldSettings
+
+// Identity is used to mark a subset of fields in an object or a combination field as capable of
+// identifying an single instance (a license plate number can ID a car), or
+// uniqueness is required for correct modeling of state (two philosophers can not use the same
+// fork at the same time).
+type Identity struct {
+	Fields []CodeName
+	Ranges []Range
+}
+
+// Range marks two fields by name as describing a range of values.
+// Start and End must reference two comparable fields of the same type.
+//
+//   - If IncludeEndValue = false, then Start < End. (range must have none zero length)
+//   - If IncludeEndValue = true, then Start <= End.
+//
+// Currently, the only for seen usage of Range is to support time ranges. Under this context,
+// the end value of a time range can create ambiguities:
+//
+//   - When a room is booked from 1 to 2 o'clock, it can be booked from 2 onwards.
+//     Here the end value is excluded from the range.
+//   - When a person is busy from Monday to Friday, he is still busy on Friday.
+//     Here the end value is included in the range.
+//
+// Although it's possible to only support one type of range on the backend and only convert to
+// the users' expectation on display, this crates a horrible off-by-one trap that can only be
+// fixed once on the display path. By adding an IncludeEndValue option, the most human friendly
+// interpretation of end value is preserved thought-out.
+type Range struct {
+	Start           CodeName
+	End             CodeName
+	IncludeEndValue bool
 }

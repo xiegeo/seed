@@ -19,25 +19,29 @@ func Domain() seed.Domain {
 				Thing: seed.Thing{
 					Name: "guest",
 				},
-				Fields: []seed.Field{
-					TimeField(),
-					NameField(),
-					EventsField(),
-					NumberOfGuestsField(),
-					ContactField(),
-					NoteField(),
+				FieldProperties: seed.FieldProperties{
+					Fields: []seed.Field{
+						TimeField(),
+						NameField(),
+						EventsField(),
+						NumberOfGuestsField(),
+						ContactField(),
+						NoteField(),
+					},
 				},
 			}, {
 				Thing: seed.Thing{
 					Name: "event",
 				},
-				Fields: []seed.Field{
-					StartTimeField(),
-					EndTimeField(),
-					EventNameField(),
-					PublishField(),
-					MaxNumberOfGuestsField(),
-					EventDescriptionField(),
+				FieldProperties: seed.FieldProperties{
+					Fields: []seed.Field{
+						StartTimeField(),
+						EndTimeField(),
+						EventNameField(),
+						PublishField(),
+						MaxNumberOfGuestsField(),
+						EventDescriptionField(),
+					},
 				},
 			},
 		},
@@ -113,9 +117,9 @@ func TimeField() seed.Field {
 		},
 		FieldType: seed.TimeStamp,
 		FieldTypeSetting: seed.TimeStampSetting{
-			Min:      time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC),
-			Max:      time.Date(3000, 1, 1, 0, 0, 0, 0, time.UTC),
-			Accuracy: time.Second,
+			Min:   time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC),
+			Max:   time.Date(3000, 1, 1, 0, 0, 0, 0, time.UTC),
+			Scale: time.Second,
 		},
 	}
 }
@@ -128,9 +132,9 @@ func StartTimeField() seed.Field {
 		language.Chinese: "开始时间",
 	}
 	f.FieldTypeSetting = seed.TimeStampSetting{
-		Min:      time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC),
-		Max:      time.Date(3000, 1, 1, 0, 0, 0, 0, time.UTC),
-		Accuracy: time.Minute * 5,
+		Min:   time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC),
+		Max:   time.Date(3000, 1, 1, 0, 0, 0, 0, time.UTC),
+		Scale: time.Minute * 5,
 	}
 	return f
 }
