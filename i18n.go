@@ -1,7 +1,6 @@
 package seed
 
 import (
-	"hash/maphash"
 	"sync"
 
 	locale "github.com/jeandeaual/go-locale"
@@ -27,7 +26,7 @@ func (n I18n[T]) GetValue(p *Picker, fallback T) T {
 // Picker is safe to use concurrently.
 type Picker struct {
 	preferred        []language.Tag
-	comprehendsCache *xsync.MapOf[language.Tag, pickOrder]
+	comprehendsCache *xsync.MapOf[string, pickOrder]
 	fallback         *Picker
 }
 
@@ -35,18 +34,9 @@ type Picker struct {
 // of the preferred list. If no matches are found, fallback is used.
 func NewPicker(preferred []language.Tag, fallback *Picker) *Picker {
 	return &Picker{
-		preferred: preferred,
-		comprehendsCache: xsync.NewTypedMapOf[language.Tag, pickOrder](func(s maphash.Seed, t language.Tag) uint64 {
-			var h maphash.Hash
-			h.SetSeed(s)
-			text, err := t.MarshalText()
-			if err != nil {
-				panic(err) // MarshalText should not error
-			}
-			h.Write(text)
-			return h.Sum64()
-		}),
-		fallback: fallback,
+		preferred:        preferred,
+		comprehendsCache: xsync.NewMapOf[pickOrder](),
+		fallback:         fallback,
 	}
 }
 
@@ -117,7 +107,8 @@ func Pick[T any](p *Picker, values I18n[T]) (language.Tag, bool) {
 }
 
 func (p *Picker) getOrder(alternative language.Tag) pickOrder {
-	order, ok := p.comprehendsCache.Load(alternative)
+	aString := alternative.String()
+	order, ok := p.comprehendsCache.Load(aString)
 	if ok {
 		return order
 	}
@@ -129,6 +120,6 @@ func (p *Picker) getOrder(alternative language.Tag) pickOrder {
 			bestOrder = newOrder
 		}
 	}
-	p.comprehendsCache.Store(alternative, bestOrder)
+	p.comprehendsCache.Store(aString, bestOrder)
 	return bestOrder
 }
