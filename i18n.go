@@ -78,7 +78,6 @@ func init() {
 type pickOrder struct {
 	confidence language.Confidence
 	order      int
-	tag        language.Tag
 }
 
 func (p pickOrder) betterThen(p2 pickOrder) bool {

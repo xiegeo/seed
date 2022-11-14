@@ -44,7 +44,7 @@ func SetField[T FieldValueType](ob *ObjectValue, field *Field, value T, opt *Set
 }
 
 func GetField[T FieldValueType](ob *ObjectValue, field *Field) (T, error) {
-	var vt T //nolint:varnamelen
+	var vt T
 	v, ok := ob.Fields[field.Name]
 	if !ok {
 		return vt, seederrors.NewFieldNotFoundError(field.Name)

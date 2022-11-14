@@ -4,6 +4,16 @@
 linters-settings:
   govet:
     check-shadowing: true
+  varnamelen:
+    # The longest distance, in source lines, that is being considered a "small scope".
+    # Variables used in at most this many lines will be ignored.
+    # Default: 5
+    max-distance: 10
+  wrapcheck:
+    # An array of strings that specify globs of packages to ignore.
+    # Default: []
+    ignorePackageGlobs:
+      - github.com/cockroachdb/errors/*
   gci:
     # Default: ["standard", "default"]
     sections:
@@ -27,11 +37,13 @@ linters:
 
     # noisy linters
     - exhaustruct # intentionally use zero value 
-    - ireturn # seed has lots of dynamics code
+    - ireturn # seed has lots of dynamic code that can only return interfaces
     - nlreturn # new line before return
     - wsl # enforce blank line rules
     - lll # long lines
-    - godot
+    - godot # Check if comments end in a period
+    - gochecknoglobals # check that no global variables exist
+    - gochecknoinits # Checks that no init functions are present in Go code
 
     # officially deprecated
     - nosnakecase
