@@ -8,10 +8,12 @@ require (
 	github.com/jeandeaual/go-locale v0.0.0-20220711133428-7de61946b173
 	github.com/puzpuzpuz/xsync/v2 v2.4.0
 	github.com/shopspring/decimal v1.3.1
+	github.com/wk8/go-ordered-map/v2 v2.0.0
 	golang.org/x/text v0.4.0
 )
 
 require (
+	github.com/bahlo/generic-list-go v0.2.0 // indirect
 	github.com/cockroachdb/redact v1.1.3 // indirect
 	github.com/getsentry/sentry-go v0.12.0 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect

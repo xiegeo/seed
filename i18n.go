@@ -89,18 +89,18 @@ func (p pickOrder) betterThen(p2 pickOrder) bool {
 
 // Pick picks the best value from I18n by the picker's preference.
 // If no languages matched, then (und, false) is returned.
-func Pick[T any](p *Picker, values I18n[T]) (language.Tag, bool) {
+func Pick[T any](picker *Picker, values I18n[T]) (language.Tag, bool) {
 	var bestTag language.Tag
 	var bestOrder pickOrder
 	for tag := range values {
-		order := p.getOrder(tag)
+		order := picker.getOrder(tag)
 		if order.betterThen(bestOrder) {
 			bestTag = tag
 			bestOrder = order
 		}
 	}
-	if p.fallback != nil && bestOrder.confidence == language.No {
-		return Pick(p.fallback, values)
+	if picker.fallback != nil && bestOrder.confidence == language.No {
+		return Pick(picker.fallback, values)
 	}
 	return bestTag, bestOrder.confidence > 0
 }

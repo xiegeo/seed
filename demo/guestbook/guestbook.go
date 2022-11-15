@@ -28,6 +28,9 @@ func Domain() seed.Domain {
 						ContactField(),
 						NoteField(),
 					},
+					Identities: []seed.Identity{{
+						Fields: []seed.CodeName{TimeField().Name, NameField().Name},
+					}},
 				},
 			}, {
 				Thing: seed.Thing{
@@ -42,6 +45,14 @@ func Domain() seed.Domain {
 						MaxNumberOfGuestsField(),
 						EventDescriptionField(),
 					},
+					Identities: []seed.Identity{{
+						Fields: []seed.CodeName{EventNameField().Name},
+					}},
+					Ranges: []seed.Range{{
+						Start:           StartTimeField().Name,
+						End:             EndTimeField().Name,
+						IncludeEndValue: false,
+					}},
 				},
 			},
 		},
@@ -59,6 +70,7 @@ func NameField() seed.Field {
 		},
 		FieldType: seed.String,
 		FieldTypeSetting: seed.StringSetting{
+			MinCodePoints: 2,
 			MaxCodePoints: 100,
 			IsSingleLine:  true,
 		},
@@ -182,6 +194,7 @@ func PhoneNumberField() seed.Field {
 			MaxCodePoints: 20,
 			IsSingleLine:  true,
 		},
+		Nullable: true,
 	}
 }
 
@@ -199,6 +212,7 @@ func EmailField() seed.Field {
 			MaxCodePoints: 50,
 			IsSingleLine:  true,
 		},
+		Nullable: true,
 	}
 }
 

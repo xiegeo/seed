@@ -13,7 +13,8 @@ linters-settings:
     # An array of strings that specify globs of packages to ignore.
     # Default: []
     ignorePackageGlobs:
-      - github.com/cockroachdb/errors/*
+      - github.com/cockroachdb/errors/* # error tools
+      - database/sql # todo
   gci:
     # Default: ["standard", "default"]
     sections:

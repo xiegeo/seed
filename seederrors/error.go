@@ -82,13 +82,10 @@ type FieldNotSupportedError struct {
 }
 
 func NewFieldNotSupportedError[S1 anyString](fieldTypeName string, fieldName S1, vpath ...string) FieldNotSupportedError {
-	p := make([]string, 0, len(vpath))
-	for _, s := range vpath {
-		p = append(p, string(s))
-	}
+	var p []string
 	var v string
-	if len(p) > 0 {
-		v, p = p[0], p[1:]
+	if len(vpath) > 0 {
+		v, p = vpath[0], vpath[1:]
 	}
 	return FieldNotSupportedError{
 		FieldTypeName: fieldTypeName,
@@ -103,4 +100,18 @@ func (e FieldNotSupportedError) Error() string {
 		return fmt.Sprintf(`field "%s" of "%s" is not supported`, e.FieldName, e.FieldTypeName)
 	}
 	return fmt.Sprintf(`setting "%s" to "%s" in field "%s" of "%s" is not supported`, strings.Join(e.Path, "."), e.Value, e.FieldName, e.FieldTypeName)
+}
+
+type FieldsNotDefinedError struct {
+	Of string
+}
+
+func NewFieldsNotDefinedError(of string) FieldsNotDefinedError {
+	return FieldsNotDefinedError{
+		Of: of,
+	}
+}
+
+func (e FieldsNotDefinedError) Error() string {
+	return fmt.Sprintf(`"%s" has an emply field list`, e.Of)
 }

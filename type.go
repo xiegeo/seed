@@ -90,11 +90,13 @@ FieldTypeSetting is any of:
 type FieldTypeSetting any
 
 type StringSetting struct {
+	MinCodePoints int64
 	MaxCodePoints int64
 	IsSingleLine  bool
 }
 
 type BinarySetting struct {
+	MinBytes int64
 	MaxBytes int64
 }
 

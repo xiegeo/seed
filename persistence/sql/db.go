@@ -33,7 +33,7 @@ type FieldDefinition struct {
 
 type ObjectDefinition struct {
 	PreHook  func(tx UseTx) error // dialect specific pre-hock
-	Option   string               // dialect specific table options, concatenated into a single string
+	Option   TableOption          // dialect specific table options, concatenated into a single string
 	PostHook func(tx UseTx) error // dialect specific post-hook
 }
 

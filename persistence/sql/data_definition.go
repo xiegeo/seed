@@ -14,7 +14,11 @@ func (db *DB) AddDomain(ctx context.Context, d *seed.Domain) error {
 	if _, ok := db.domains[d.Name]; ok {
 		return seederrors.NewCodeNameExistsError(d.Name, seederrors.ThingTypeDomain, "")
 	}
-	db.domains[d.Name] = domainInfoFromDomain(*d)
+	domainInfo, err := db.domainInfoFromDomain(ctx, d)
+	if err != nil {
+		return err
+	}
+	db.domains[d.Name] = domainInfo
 	return nil
 }
 
@@ -29,7 +33,7 @@ func (db *DB) createTable(txc txContext, d *seed.Domain, ob *seed.Object) (err e
 	}
 	var preHooks, postHooks []func(tx UseTx) error
 	var fieldDefinitions []string
-	var tableOption string
+	var tableOption TableOption
 	if db.option.TableDefinition != nil {
 		td, err := db.option.TableDefinition(ob)
 		if err != nil {
