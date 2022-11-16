@@ -1,7 +1,9 @@
 package sql
 
 import (
+	"fmt"
 	"io"
+	"strings"
 
 	orderedmap "github.com/wk8/go-ordered-map/v2"
 	"github.com/xiegeo/seed/seederrors"
@@ -40,18 +42,30 @@ func (t CreateTable) writeTo(w *writeWarpper) {
 type Column struct {
 	Name       string
 	Type       ColumnType
-	TypeArg    []int64
+	TypeArg    []string
 	Constraint ColumnConstraint
 }
 
 func (c Column) writeTo(w *writeWarpper) {
-	// todo
+	w.printf("%s %s", c.Name, c.Type)
+	if len(c.TypeArg) == 0 {
+		w.printf(" ")
+	} else {
+		w.printf("(%s) ", strings.Join(c.TypeArg, ","))
+	}
+	c.Constraint.writeTo(w)
 }
 
 type ColumnType string
 
 type ColumnConstraint struct {
 	NotNull bool
+}
+
+func (c ColumnConstraint) writeTo(w *writeWarpper) {
+	if c.NotNull {
+		w.printf("NOT NULL")
+	}
 }
 
 type TableConstraint struct {
@@ -61,7 +75,17 @@ type TableConstraint struct {
 }
 
 func (c TableConstraint) writeTo(w *writeWarpper) {
-	// todo
+	if len(c.PrimaryKeys) > 0 {
+		w.printf(",\n\tPRIMARY KEY (%s)", strings.Join(c.PrimaryKeys, ","))
+	}
+	for _, unique := range c.Uniques {
+		w.printf(",\n\t     UNIQUE (%s)", strings.Join(unique, ","))
+	}
+	for _, expression := range c.Checks {
+		w.printf(",\n\t      CHECK (")
+		expression.writeTo(w)
+		w.printf(")")
+	}
 }
 
 type Expression struct {
@@ -76,6 +100,23 @@ const (
 	ValueExpression ExpressionType = iota
 	UnaryExpression
 	BinaryExpression
+	ListExpression
 )
+
+func (e Expression) writeTo(w *writeWarpper) {
+	switch e.Type {
+	default:
+		w.additionalError(fmt.Errorf("ExpressionType %d not handled", e.Type))
+	case ValueExpression:
+		w.write([]byte(e.A))
+	case UnaryExpression:
+		w.printf("%s ", e.A)
+		e.Expressions[0].writeTo(w)
+	case BinaryExpression:
+		w.writeJoin([]byte(" "+e.A+" "), warpSlice(e.Expressions...)...)
+	case ListExpression:
+		w.writeArg(warpSlice(e.Expressions...)...)
+	}
+}
 
 type TableOption string

@@ -5,33 +5,27 @@ import (
 	"github.com/xiegeo/seed/seederrors"
 )
 
-func sqliteTableDefinition(*seed.Object) (ObjectDefinition, error) {
-	return ObjectDefinition{
-		Option: "STRICT",
-	}, nil
-}
+const (
+	sqliteTableDefinition       = "STRICT"
+	sqliteHelperTableDefinition = "STRICT, WITHOUT ROWID"
+)
 
-func sqliteHelperTableDefinition(*seed.Object) (ObjectDefinition, error) {
-	return ObjectDefinition{
-		Option: "STRICT, WITHOUT ROWID",
-	}, nil
-}
-
-func sqliteFieldType(f *seed.Field) (string, error) {
+func sqliteColumnType(f *seed.Field, c *Column) error {
 	switch f.FieldType {
 	case seed.String:
-		return "TEXT", nil
+		c.Type = "TEXT"
 	case seed.Binary:
-		return "BLOB", nil
+		c.Type = "BLOB"
 	case seed.Boolean:
-		return "INTEGER", nil // 0: false, 1: true
+		c.Type = "INTEGER" // 0: false, 1: true
 	case seed.TimeStamp:
-		return "TEXT", nil
+		c.Type = "TEXT"
 	case seed.Integer:
-		return "INTEGER", nil
+		c.Type = "INTEGER"
 	case seed.Real:
-		return "REAL", nil
+		c.Type = "REAL"
 	default:
-		return "", seederrors.NewFieldNotSupportedError(f.FieldType.String(), f.Name)
+		return seederrors.NewFieldNotSupportedError(f.FieldType.String(), f.Name)
 	}
+	return nil
 }
