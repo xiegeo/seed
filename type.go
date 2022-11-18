@@ -89,6 +89,14 @@ FieldTypeSetting is any of:
 */
 type FieldTypeSetting any
 
+func GetFieldTypeSetting[T FieldTypeSetting](f *Field) (T, error) {
+	v, ok := f.FieldTypeSetting.(T)
+	if !ok {
+		return v, fmt.Errorf("can not get a %T from field %s with type %s and setting of %T", v, f.Name, f.FieldType, f.FieldTypeSetting)
+	}
+	return v, nil
+}
+
 type StringSetting struct {
 	MinCodePoints int64
 	MaxCodePoints int64
@@ -103,9 +111,10 @@ type BinarySetting struct {
 type BooleanSetting struct{}
 
 type TimeStampSetting struct {
-	Min   time.Time
-	Max   time.Time
-	Scale time.Duration // >= 24h: date only; >= 1s datetime
+	Min          time.Time
+	Max          time.Time
+	Scale        time.Duration // >= 24h: date only; >= 1s datetime
+	WithTimeZone bool          // if false always UTC
 }
 
 type IntegerSetting struct {

@@ -71,24 +71,3 @@ func (db *DB) createTable(txc txContext, d *seed.Domain, ob *seed.Object) (err e
 	}
 	return nil
 }
-
-// FieldsToSQL implements GetDefinition
-type FieldsToSQL struct {
-	Direct [seed.FieldTypeMax + 1]func(*seed.Field) (FieldDefinition, error)
-	I18N   [seed.FieldTypeMax + 1]func(*seed.Field) (FieldDefinition, error)
-}
-
-func (toSQL *FieldsToSQL) GetDefinition(f *seed.Field) (FieldDefinition, error) {
-	if toSQL == nil || !f.FieldType.Valid() {
-		return FieldDefinition{}, seederrors.NewFieldNotSupportedError(f.FieldType.String(), f.Name)
-	}
-	var typed func(*seed.Field) (FieldDefinition, error)
-	if f.IsI18n {
-		typed = toSQL.I18N[f.FieldType]
-	}
-	typed = toSQL.Direct[f.FieldType]
-	if typed == nil {
-		return FieldDefinition{}, seederrors.NewFieldNotSupportedError(f.FieldType.String(), f.Name, fmt.Sprint(f.IsI18n), "IsI18n")
-	}
-	return typed(f)
-}

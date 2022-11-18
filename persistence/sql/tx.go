@@ -8,7 +8,7 @@ import (
 )
 
 type txContext struct {
-	context.Context
+	context.Context //nolint:containedctx
 	UseTx
 }
 

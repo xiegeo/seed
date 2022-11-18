@@ -28,7 +28,7 @@ func (db *DB) domainInfoFromDomain(ctx context.Context, d *seed.Domain) (domainI
 
 type objectInfo struct {
 	seed.Thing
-	tableName string
+	table     Table
 	fieldList []seed.CodeName
 	fieldMap  map[seed.CodeName]fieldInfo
 }
@@ -56,6 +56,6 @@ func (db *DB) objectInfoFromObject(ctx context.Context, d *seed.Domain, ob seed.
 
 type fieldInfo struct {
 	seed.Field
-	// colDef      []ColumnDefinition
-	// helperTable TableDefinition
+	cols   []Column
+	tables []Table
 }
