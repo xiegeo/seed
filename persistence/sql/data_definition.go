@@ -28,5 +28,5 @@ func (db *DB) generateTableName(ctx context.Context, d *seed.Domain, ob *seed.Ob
 
 func (db *DB) createTable(txc txContext, d *seed.Domain, ob *seed.Object) (err error) {
 	// todo
-	return null
+	return nil
 }

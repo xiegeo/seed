@@ -42,3 +42,19 @@ func (c ColumnFeatures) Match(f *seed.Field) (ColumnFeature, bool) {
 	}
 	return ColumnFeature{}, false
 }
+
+func (c ColumnFeature) SQL(f *seed.Field) (Column, []Expression, error) {
+	col := Column{
+		Name: string(f.Name),
+		Type: c.TypeName,
+		Constraint: ColumnConstraint{
+			NotNull: !f.Nullable,
+		},
+	}
+	if c.AcceptArguments {
+		return Column{}, nil, fmt.Errorf("arguments not implemented for SQL column %s", c.TypeName)
+	}
+	var checks []Expression
+	// future: use checks to add additional safety.
+	return col, checks, nil
+}

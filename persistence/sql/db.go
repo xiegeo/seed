@@ -19,7 +19,7 @@ type DB struct {
 
 type DBOption struct {
 	TranslateStatement func(string) string // translate ? in statements to a format the database understands.
-	ColumnFeatures
+	ColumnFeatures                         // describes column type support
 }
 
 // FieldDefinition list 0 to many Fields.
