@@ -27,47 +27,6 @@ func (db *DB) generateTableName(ctx context.Context, d *seed.Domain, ob *seed.Ob
 }
 
 func (db *DB) createTable(txc txContext, d *seed.Domain, ob *seed.Object) (err error) {
-	tableName, err := db.generateTableName(txc, d, ob)
-	if err != nil {
-		return err
-	}
-	var preHooks, postHooks []func(tx UseTx) error
-	var fieldDefinitions []string
-	var tableOption TableOption
-	if db.option.TableDefinition != nil {
-		td, err := db.option.TableDefinition(ob)
-		if err != nil {
-			return err
-		}
-		preHooks = append(preHooks, td.PreHook)
-		tableOption = td.Option
-		postHooks = append(postHooks, td.PostHook)
-	}
-	for i := range ob.Fields {
-		f := &ob.Fields[i]
-		fd, err := db.option.FieldDefinition(f)
-		if err != nil {
-			return err
-		}
-		preHooks = append(preHooks, fd.PreHook)
-		fieldDefinitions = append(fieldDefinitions, fd.Fields...)
-		postHooks = append(postHooks, fd.PostHook)
-	}
-
-	for _, h := range preHooks {
-		if err := h(txc); err != nil {
-			return err
-		}
-	}
-	sql := fmt.Sprintf("CREAT TABLE %s (\n\t%s\n) %s", tableName, strings.Join(fieldDefinitions, ",\n\t"), tableOption)
-	_, err = txc.Exec(sql)
-	if err != nil {
-		return seederrors.WithMessagef(err, `can not create table for object "%s" with SQL "%s"`, ob.Name, sql)
-	}
-	for _, h := range postHooks {
-		if err := h(txc); err != nil {
-			return err
-		}
-	}
-	return nil
+	// todo
+	return null
 }

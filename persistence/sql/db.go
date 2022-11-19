@@ -19,8 +19,7 @@ type DB struct {
 
 type DBOption struct {
 	TranslateStatement func(string) string // translate ? in statements to a format the database understands.
-	FieldDefinition    func(*seed.Field) (FieldDefinition, error)
-	TableDefinition    func(*seed.Object) (ObjectDefinition, error)
+	ColumnFeatures
 }
 
 // FieldDefinition list 0 to many Fields.
