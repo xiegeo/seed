@@ -1,4 +1,4 @@
-package sql
+package sqldb
 
 import (
 	"database/sql"
@@ -20,6 +20,7 @@ type DB struct {
 type DBOption struct {
 	TranslateStatement func(string) string // translate ? in statements to a format the database understands.
 	ColumnFeatures                         // describes column type support
+	TableOption
 }
 
 func newDefaultOption() *DBOption {
@@ -30,8 +31,9 @@ func newDefaultOption() *DBOption {
 
 func New(sqldb *sql.DB, options ...func(*DBOption) error) (*DB, error) {
 	db := DB{
-		sqldb:  sqldb,
-		option: newDefaultOption(),
+		sqldb:   sqldb,
+		option:  newDefaultOption(),
+		domains: make(map[seed.CodeName]domainInfo),
 	}
 	for _, op := range options {
 		err := op(db.option)

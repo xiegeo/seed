@@ -1,4 +1,4 @@
-package sql
+package sqldb
 
 import (
 	"fmt"
@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	orderedmap "github.com/wk8/go-ordered-map/v2"
+
 	"github.com/xiegeo/seed/seederrors"
 )
 
@@ -14,6 +15,13 @@ type Table struct {
 	Columns    *orderedmap.OrderedMap[string, Column]
 	Constraint TableConstraint
 	Option     TableOption
+}
+
+func InitTable(name string) Table {
+	return Table{
+		Name:    name,
+		Columns: orderedmap.New[string, Column](),
+	}
 }
 
 type CreateTable Table
@@ -31,6 +39,7 @@ func (t CreateTable) writeTo(w *writeWarpper) {
 	w.printf("CREATE TABLE %s (\n\t", t.Name)
 	column := t.Columns.Oldest()
 	column.Value.writeTo(w)
+	column = column.Next()
 	for ; column != nil; column = column.Next() {
 		w.printf(",\n\t")
 		column.Value.writeTo(w)

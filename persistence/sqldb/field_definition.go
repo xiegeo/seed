@@ -1,6 +1,7 @@
-package sql
+package sqldb
 
 import (
+	"fmt"
 	"math/big"
 	"time"
 
@@ -24,6 +25,9 @@ func (d fieldDefinition) append(d2 fieldDefinition) fieldDefinition {
 // generateFieldDefinition support a seed defined field with 0 to many columns and 0 to many tables.
 // of both columns and tables are none, an error must be returned.
 func (db *DB) generateFieldDefinition(f *seed.Field) (fieldDefinition, error) {
+	if f.IsI18n {
+		return fieldDefinition{}, seederrors.NewFieldNotSupportedError(f.FieldType.String(), f.Name, "IsI18n")
+	}
 	col, found := db.option.ColumnFeatures.Match(f)
 	if found {
 		return col.fieldDefinition(f)
@@ -33,7 +37,10 @@ func (db *DB) generateFieldDefinition(f *seed.Field) (fieldDefinition, error) {
 		return db.generateFieldDefinition(boolAsIntegerField(f))
 	case seed.TimeStampSetting:
 		return db.timeStampFailback(f, setting)
+	case nil:
+		return fieldDefinition{}, fmt.Errorf("FieldTypeSetting not set")
 	}
+	return fieldDefinition{}, seederrors.NewFieldNotSupportedError(f.FieldType.String(), f.Name)
 }
 
 // boolAsIntegerField implements boolean values using 0 for false, 1 for true.
@@ -70,7 +77,7 @@ var _failbackTimeStampCoverage = seed.TimeStampSetting{
 func (db *DB) timeStampFailback(f *seed.Field, setting seed.TimeStampSetting) (fieldDefinition, error) {
 	if !setting.WithTimeZoneOffset { // use strings if time stamp without time zone is not supported natively.
 		if !_failbackTimeStampCoverage.Covers(setting) {
-			return fieldDefinition{}, seederrors.NewFieldNotSupportedError(f.FieldType.String(), f.Name)
+			return fieldDefinition{}, seederrors.NewFieldNotSupportedError(f.FieldType.String(), f.Name, "FieldTypeSetting")
 		}
 		utcField := *f
 		utcField.FieldType = seed.String

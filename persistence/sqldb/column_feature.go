@@ -1,4 +1,4 @@
-package sql
+package sqldb
 
 import (
 	"fmt"
@@ -18,7 +18,7 @@ type ColumnFeature struct {
 	Implement       seed.FieldTypeSetting // the widest allowed range of the field, optional feature support
 }
 
-func (c ColumnFeatures) Append(typeName ColumnType, acceptArgs bool, f *seed.Field) error {
+func (c *ColumnFeatures) Append(typeName ColumnType, acceptArgs bool, f *seed.Field) error {
 	if !f.FieldType.Valid() {
 		return fmt.Errorf("field type %s is not valid", f.FieldType)
 	}
@@ -30,7 +30,7 @@ func (c ColumnFeatures) Append(typeName ColumnType, acceptArgs bool, f *seed.Fie
 	return nil
 }
 
-func (c ColumnFeatures) Match(f *seed.Field) (ColumnFeature, bool) {
+func (c *ColumnFeatures) Match(f *seed.Field) (ColumnFeature, bool) {
 	if !f.FieldType.Valid() {
 		return ColumnFeature{}, false
 	}

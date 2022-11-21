@@ -1,4 +1,4 @@
-package sql
+package sqldb
 
 import (
 	"math"
@@ -11,6 +11,12 @@ const (
 	sqliteTableDefinition       = "STRICT"
 	sqliteHelperTableDefinition = "STRICT, WITHOUT ROWID"
 )
+
+func Sqlite(op *DBOption) error {
+	op.ColumnFeatures = SqliteColumnFeatures()
+	op.TableOption = sqliteTableDefinition
+	return nil
+}
 
 func SqliteColumnFeatures() ColumnFeatures {
 	maxBlobSize := int64(1_000_000_000) // default setting for SQLITE_MAX_LENGTH

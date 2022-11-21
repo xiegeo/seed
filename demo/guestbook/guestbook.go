@@ -23,9 +23,9 @@ func Domain() seed.Domain {
 					Fields: []seed.Field{
 						TimeField(),
 						NameField(),
-						EventsField(),
+						// EventsField(), // todo: list and ref types
 						NumberOfGuestsField(),
-						ContactField(),
+						// ContactField(), // todo: combination type
 						NoteField(),
 					},
 					Identities: []seed.Identity{{
@@ -40,10 +40,10 @@ func Domain() seed.Domain {
 					Fields: []seed.Field{
 						StartTimeField(),
 						EndTimeField(),
-						EventNameField(),
+						// EventNameField(), // todo:i18n
 						PublishField(),
 						MaxNumberOfGuestsField(),
-						EventDescriptionField(),
+						// EventDescriptionField(), // todo:i18n
 					},
 					Identities: []seed.Identity{{
 						Fields: []seed.CodeName{EventNameField().Name},
@@ -282,6 +282,7 @@ func PublishField() seed.Field {
 				language.Chinese: "发布",
 			},
 		},
-		FieldType: seed.Boolean,
+		FieldType:        seed.Boolean,
+		FieldTypeSetting: seed.BooleanSetting{},
 	}
 }

@@ -27,10 +27,10 @@ func (o Thing) DeepCopy() Thing {
 			cp.Label[k2] = v2
 		}
 	}
-	if o.Discription != nil {
-		cp.Discription = make(map[language.Tag]string, len(o.Discription))
-		for k2, v2 := range o.Discription {
-			cp.Discription[k2] = v2
+	if o.Description != nil {
+		cp.Description = make(map[language.Tag]string, len(o.Description))
+		for k2, v2 := range o.Description {
+			cp.Description[k2] = v2
 		}
 	}
 	return cp
