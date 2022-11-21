@@ -56,6 +56,5 @@ func (db *DB) objectInfoFromObject(ctx context.Context, d *seed.Domain, ob seed.
 
 type fieldInfo struct {
 	seed.Field
-	cols   []Column
-	tables []Table
+	fieldDefinition
 }

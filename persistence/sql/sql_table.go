@@ -71,7 +71,8 @@ func (c ColumnConstraint) writeTo(w *writeWarpper) {
 type TableConstraint struct {
 	PrimaryKeys []string
 	Uniques     [][]string
-	Checks      []Expression
+	ForeignKey
+	Checks []Expression
 }
 
 func (c TableConstraint) writeTo(w *writeWarpper) {
@@ -86,6 +87,12 @@ func (c TableConstraint) writeTo(w *writeWarpper) {
 		expression.writeTo(w)
 		w.printf(")")
 	}
+}
+
+type ForeignKey struct {
+	Keys       []string
+	TableName  string
+	References []string
 }
 
 type Expression struct {

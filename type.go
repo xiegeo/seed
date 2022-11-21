@@ -13,7 +13,7 @@ type CodeName string
 type Thing struct {
 	Name        CodeName     // name is the long term api name of the thing, name is locally unique.
 	Label       I18n[string] // used for input label or column header
-	Discription I18n[string] // addition information
+	Description I18n[string] // addition information
 }
 
 // Domain holds a collection of objects, equivalent to a SQL database.
@@ -173,10 +173,10 @@ func (s BooleanSetting) Covers(s2 BooleanSetting) bool {
 }
 
 type TimeStampSetting struct {
-	Min          time.Time
-	Max          time.Time
-	Scale        time.Duration // >= 24h: date only; >= 1s datetime; < 1s support fraction seconds
-	WithTimeZone bool          // if false always UTC
+	Min                time.Time
+	Max                time.Time
+	Scale              time.Duration // >= 24h: date only; >= 1s: datetime; < 1s: support fraction seconds
+	WithTimeZoneOffset bool          // if false always UTC
 }
 
 // Covers returns true if s can support all values in s2
@@ -186,7 +186,7 @@ func (s TimeStampSetting) Covers(s2 TimeStampSetting) bool {
 		s.Min.After(s2.Min),
 		s.Max.Before(s2.Max),
 		s.Scale > s2.Scale,
-		!s.WithTimeZone && s2.WithTimeZone:
+		!s.WithTimeZoneOffset && s2.WithTimeZoneOffset:
 		return false
 	}
 	return true

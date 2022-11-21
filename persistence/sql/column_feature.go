@@ -43,7 +43,7 @@ func (c ColumnFeatures) Match(f *seed.Field) (ColumnFeature, bool) {
 	return ColumnFeature{}, false
 }
 
-func (c ColumnFeature) SQL(f *seed.Field) (Column, []Expression, error) {
+func (c ColumnFeature) fieldDefinition(f *seed.Field) (fieldDefinition, error) {
 	col := Column{
 		Name: string(f.Name),
 		Type: c.TypeName,
@@ -52,9 +52,10 @@ func (c ColumnFeature) SQL(f *seed.Field) (Column, []Expression, error) {
 		},
 	}
 	if c.AcceptArguments {
-		return Column{}, nil, fmt.Errorf("arguments not implemented for SQL column %s", c.TypeName)
+		return fieldDefinition{}, fmt.Errorf("arguments not implemented for SQL column %s", c.TypeName)
 	}
-	var checks []Expression
-	// future: use checks to add additional safety.
-	return col, checks, nil
+	// future: add checks to add additional safety.
+	return fieldDefinition{
+		cols: []Column{col},
+	}, nil
 }

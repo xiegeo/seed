@@ -22,20 +22,6 @@ type DBOption struct {
 	ColumnFeatures                         // describes column type support
 }
 
-// FieldDefinition list 0 to many Fields.
-// Use hooks to apply additional operations outside field definition.
-type FieldDefinition struct {
-	PreHook  func(tx UseTx) error // dialect specific pre-hock, such as preparing helper tables
-	Fields   []string             // dialect specific field definition
-	PostHook func(tx UseTx) error // dialect specific post-hook
-}
-
-type ObjectDefinition struct {
-	PreHook  func(tx UseTx) error // dialect specific pre-hock
-	Option   TableOption          // dialect specific table options, concatenated into a single string
-	PostHook func(tx UseTx) error // dialect specific post-hook
-}
-
 func newDefaultOption() *DBOption {
 	return &DBOption{
 		TranslateStatement: func(s string) string { return s },
@@ -56,36 +42,16 @@ func New(sqldb *sql.DB, options ...func(*DBOption) error) (*DB, error) {
 	return &db, nil
 }
 
-/*
-func Open(driverName, dataSourceName string) (*DB, error) {
-	sqldb, err := sql.Open(driverName, dataSourceName)
-	if err != nil {
-		return nil, seederrors.WithMessagef(err, "open sql database driverName=%s", driverName)
-	}
-	return New(driverName, sqldb)
-}
-
-func New(driverFamily string, sqldb *sql.DB) (*DB, error) {
-	db := DB{
-		sqldb: sqldb,
-	}
-
-	switch driverFamily { // not fully tested, idea taken from github.com/bradfitz/go-sql-test
-	case "postgres", "pgx":
-		db.TranslateStatement = generateTranslateStatementFunc("$")
-	case "oracle", "goracle":
-		db.TranslateStatement = generateTranslateStatementFunc(":")
-	default:
-		db.TranslateStatement = func(s string) string { return s }
-	}
-
-	return &db, nil
-}
-*/
-
 var qrx = regexp.MustCompile(`\?`)
 
 // generateTranslateStatementFunc converts "?" characters to $1, $2, $n on postgres, :1, :2, :n on Oracle
+// case "postgres", "pgx":
+//
+//	db.TranslateStatement = generateTranslateStatementFunc("$")
+//
+// case "oracle", "goracle":
+//
+//	db.TranslateStatement = generateTranslateStatementFunc(":")
 func generateTranslateStatementFunc(pref string) func(string) string {
 	n := 0
 	return func(sql string) string {
