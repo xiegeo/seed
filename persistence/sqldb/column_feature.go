@@ -1,9 +1,8 @@
 package sqldb
 
 import (
-	"fmt"
-
 	"github.com/xiegeo/seed"
+	"github.com/xiegeo/seed/seederrors"
 )
 
 // ColumnFeatures describe purposed column types that support each field
@@ -20,7 +19,7 @@ type ColumnFeature struct {
 
 func (c *ColumnFeatures) Append(typeName ColumnType, acceptArgs bool, f *seed.Field) error {
 	if !f.FieldType.Valid() {
-		return fmt.Errorf("field type %s is not valid", f.FieldType)
+		return seederrors.NewSystemError("field type %s is not valid", f.FieldType)
 	}
 	c[f.FieldType-1] = append(c[f.FieldType-1], ColumnFeature{
 		TypeName:        typeName,
@@ -28,6 +27,16 @@ func (c *ColumnFeatures) Append(typeName ColumnType, acceptArgs bool, f *seed.Fi
 		Implement:       f.FieldTypeSetting,
 	})
 	return nil
+}
+
+func (c *ColumnFeatures) MustAppend(typeName ColumnType, acceptArgs bool, f *seed.Field) {
+	panicOnError(c.Append(typeName, acceptArgs, f))
+}
+
+func panicOnError(err error) {
+	if err != nil {
+		panic(err)
+	}
 }
 
 func (c *ColumnFeatures) Match(f *seed.Field) (ColumnFeature, bool) {
@@ -52,7 +61,7 @@ func (c ColumnFeature) fieldDefinition(f *seed.Field) (fieldDefinition, error) {
 		},
 	}
 	if c.AcceptArguments {
-		return fieldDefinition{}, fmt.Errorf("arguments not implemented for SQL column %s", c.TypeName)
+		return fieldDefinition{}, seederrors.NewSystemError("arguments not implemented for SQL column %s", c.TypeName)
 	}
 	// future: add checks to add additional safety.
 	return fieldDefinition{

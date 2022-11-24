@@ -9,6 +9,9 @@ linters-settings:
     # Variables used in at most this many lines will be ignored.
     # Default: 5
     max-distance: 10
+    # Optional list of variable names that should be ignored completely.
+    # Default: []
+    ignore-names: [vt,tx,db]
   wrapcheck:
     # An array of strings that specify globs of packages to ignore.
     # Default: []
@@ -39,12 +42,16 @@ linters:
     # noisy linters
     - exhaustruct # intentionally use zero value 
     - ireturn # seed has lots of dynamic code that can only return interfaces
-    - nlreturn # new line before return
-    - wsl # enforce blank line rules
-    - lll # long lines
-    - godot # Check if comments end in a period
     - gochecknoglobals # check that no global variables exist
     - gochecknoinits # Checks that no init functions are present in Go code
+    - paralleltest # only need to care when tests take a long time.
+    - nonamedreturns # name returns can add clarity to function signatures, or save declare a variable just to hold return variable.
+
+    # style linters that's better replaced by eyeballs
+    - wsl # enforce blank line rules
+    - nlreturn # new line before return
+    - lll # long lines
+    - godot # Check if comments end in a period
 
     # officially deprecated
     - nosnakecase
@@ -60,6 +67,10 @@ linters:
 
 issues:
   exclude-rules:
+    - text: "parameter name .* is too short for the scope of its usage"
+      linters:
+        - varnamelen # don't check parameter names
+
     - path: "(.+)_test.go"
       linters:
         - maintidx

@@ -1,7 +1,6 @@
 package sqldb
 
 import (
-	"fmt"
 	"math/big"
 	"time"
 
@@ -9,6 +8,7 @@ import (
 	"github.com/xiegeo/seed/seederrors"
 )
 
+// fieldDefinition support a seed defined field with 0 to many columns and 0 to many tables.
 type fieldDefinition struct {
 	cols   []Column
 	checks []Expression
@@ -22,25 +22,39 @@ func (d fieldDefinition) append(d2 fieldDefinition) fieldDefinition {
 	return d
 }
 
-// generateFieldDefinition support a seed defined field with 0 to many columns and 0 to many tables.
-// of both columns and tables are none, an error must be returned.
-func (db *DB) generateFieldDefinition(f *seed.Field) (fieldDefinition, error) {
+func (db *DB) generateFieldInfo(f *seed.Field) (*fieldInfo, error) {
+	fi, err := db.generateFieldInfoSub(f)
+	if err != nil {
+		return nil, err
+	}
+	fi.Field = *f
+	return fi, nil
+}
+
+// generateFieldInfoSub is generateFieldInfo without setting the fieldInfo.Field to match input
+func (db *DB) generateFieldInfoSub(f *seed.Field) (*fieldInfo, error) {
 	if f.IsI18n {
-		return fieldDefinition{}, seederrors.NewFieldNotSupportedError(f.FieldType.String(), f.Name, "IsI18n")
+		return nil, seederrors.NewFieldNotSupportedError(f.FieldType.String(), f.Name, "IsI18n")
 	}
 	col, found := db.option.ColumnFeatures.Match(f)
 	if found {
-		return col.fieldDefinition(f)
+		fd, err := col.fieldDefinition(f)
+		return &fieldInfo{
+			Field:           *f,
+			fieldDefinition: fd,
+		}, err
 	}
 	switch setting := f.FieldTypeSetting.(type) {
 	case seed.BooleanSetting:
-		return db.generateFieldDefinition(boolAsIntegerField(f))
+		fd, err := db.generateFieldInfoSub(boolAsIntegerField(f))
+		fd.Field = *f // return the original boolean field, sql supports casting bool to 0 and 1
+		return fd, err
 	case seed.TimeStampSetting:
 		return db.timeStampFailback(f, setting)
 	case nil:
-		return fieldDefinition{}, fmt.Errorf("FieldTypeSetting not set")
+		return nil, seederrors.NewSystemError("FieldTypeSetting not set in field %s", f.Name)
 	}
-	return fieldDefinition{}, seederrors.NewFieldNotSupportedError(f.FieldType.String(), f.Name)
+	return nil, seederrors.NewFieldNotSupportedError(f.FieldType.String(), f.Name)
 }
 
 // boolAsIntegerField implements boolean values using 0 for false, 1 for true.
@@ -74,29 +88,110 @@ var _failbackTimeStampCoverage = seed.TimeStampSetting{
 	Scale: time.Nanosecond,
 }
 
-func (db *DB) timeStampFailback(f *seed.Field, setting seed.TimeStampSetting) (fieldDefinition, error) {
+func utcTimeLayoutForScale(scale time.Duration) string {
+	day := 24 * time.Hour
+	if scale%day == 0 {
+		return "2006-01-02"
+	} else if scale%time.Second == 0 {
+		return "2006-01-02T15:04:05"
+	} else if scale%time.Millisecond == 0 {
+		return "2006-01-02T15:04:05.000"
+	} else if scale&time.Microsecond == 0 {
+		return "2006-01-02T15:04:05.000000"
+	}
+	return "2006-01-02T15:04:05.000000000"
+}
+
+func utcTimeStringFuncForLayout(layout string) func(any) (any, error) {
+	return func(v any) (any, error) {
+		vt, ok := v.(time.Time)
+		if !ok {
+			return nil, seederrors.NewSystemError("encoder expect time.Time but got %T", v)
+		}
+		_, offset := vt.Zone()
+		if offset != 0 {
+			return nil, seederrors.NewSystemError("encoder expect time in UTC but got %s", vt.Location())
+		}
+		return vt.Format(layout), nil
+	}
+}
+
+func (db *DB) timeStampFailback(f *seed.Field, setting seed.TimeStampSetting) (*fieldInfo, error) {
 	if !setting.WithTimeZoneOffset { // use strings if time stamp without time zone is not supported natively.
 		if !_failbackTimeStampCoverage.Covers(setting) {
-			return fieldDefinition{}, seederrors.NewFieldNotSupportedError(f.FieldType.String(), f.Name, "FieldTypeSetting")
+			return nil, seederrors.NewFieldNotSupportedError(f.FieldType.String(), f.Name, "FieldTypeSetting")
 		}
+		layout := utcTimeLayoutForScale(setting.Scale)
+		codePoints := int64(len(layout))
+
 		utcField := *f
 		utcField.FieldType = seed.String
 		utcField.FieldTypeSetting = seed.StringSetting{
-			MinCodePoints: 1,                                           // the empty string is not allowed
-			MaxCodePoints: int64(len("yyyy-mm-ddThh:mm:ss.123456789")), // enough for any value from year 1 to 9999 in nano seconds
+			MinCodePoints: codePoints,
+			MaxCodePoints: codePoints,
 		}
-		return db.generateFieldDefinition(&utcField)
+		fi, err := db.generateFieldInfoSub(&utcField)
+		if err != nil {
+			return nil, err
+		}
+		fi.WarpEncoder(utcTimeStringFuncForLayout(layout))
+		fi.WarpDecoder(func(a any) (any, error) {
+			vt, ok := a.(string)
+			if !ok {
+				return nil, seederrors.NewSystemError("decoder expected string but got %T", a)
+			}
+			return time.Parse(layout, vt)
+		})
 	}
 	setting.WithTimeZoneOffset = false
 	f2 := *f
 	f2.FieldTypeSetting = setting
-	utcTime, err := db.generateFieldDefinition(&f2) // don't call timeStampFailback directly because time stamp without time zone could be supported natively.
+	utcTime, err := db.generateFieldInfoSub(&f2) // don't call timeStampFailback directly because time stamp without time zone could be supported natively.
 	if err != nil {
-		return fieldDefinition{}, err
+		return nil, err
 	}
-	timeZoneOffset, err := db.generateFieldDefinition(timeZoneOffsetField(f))
+	timeZoneOffset, err := db.generateFieldInfoSub(timeZoneOffsetField(f))
 	if err != nil {
-		return fieldDefinition{}, err
+		return nil, err
 	}
-	return utcTime.append(timeZoneOffset), nil
+
+	encodeUTC := utcTime.Encoder()
+	encodeOffset := timeZoneOffset.Encoder()
+	decodeUTC := utcTime.Decoder()
+	decodeOffset := timeZoneOffset.Decoder()
+	return &fieldInfo{
+		fieldDefinition: utcTime.fieldDefinition.append(timeZoneOffset.fieldDefinition),
+		encoder: func(v any) ([]any, error) {
+			vt, ok := v.(time.Time)
+			if !ok {
+				return nil, seederrors.NewSystemError("encoder expect time.Time but got %T", v)
+			}
+			_, offset := vt.Zone()
+			utcValue, err := encodeUTC(vt.UTC())
+			if err != nil {
+				return nil, err
+			}
+			offsetValue, err := encodeOffset(offset)
+			if err != nil {
+				return nil, err
+			}
+			return append(utcValue, offsetValue...), nil
+		},
+		decoder: func(a []any) (any, error) {
+			utcValue := a[:len(utcTime.cols)]
+			utcInter, err := decodeUTC(utcValue)
+			if err != nil {
+				return nil, err
+			}
+			utcTyped, ok := utcInter.(time.Time)
+			if !ok {
+				return nil, seederrors.NewSystemError("decoder expected time.Time but got %T", utcInter)
+			}
+			offsetValue := a[len(utcTime.cols):]
+			offsetInter, err := decodeOffset(offsetValue)
+			if err != nil {
+				return nil, err
+			}
+		},
+	}, nil
 }

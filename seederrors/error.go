@@ -7,6 +7,15 @@ import (
 	"strings"
 )
 
+// SystemErrors describe internal system errors
+type SystemError struct {
+	error
+}
+
+func NewSystemError(format string, a ...any) SystemError {
+	return SystemError{error: fmt.Errorf(format, a...)} //nolint:goerr113
+}
+
 type FieldNotFoundError struct {
 	FieldName string
 }
@@ -21,6 +30,18 @@ func NewFieldNotFoundError[S anyString](fieldName S) FieldNotFoundError {
 
 func (e FieldNotFoundError) Error() string {
 	return fmt.Sprintf(`field "%s" is not found`, e.FieldName)
+}
+
+type ObjectNotFoundError struct {
+	ObjectName string
+}
+
+func NewObjectNotFoundError[S anyString](objectName S) ObjectNotFoundError {
+	return ObjectNotFoundError{ObjectName: string(objectName)}
+}
+
+func (e ObjectNotFoundError) Error() string {
+	return fmt.Sprintf(`object "%s" is not found`, e.ObjectName)
 }
 
 type TargetValueTypeNotSupportedError struct {

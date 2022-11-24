@@ -1,7 +1,6 @@
 package sqldb
 
 import (
-	"fmt"
 	"io"
 	"strings"
 
@@ -22,6 +21,16 @@ func InitTable(name string) Table {
 		Name:    name,
 		Columns: orderedmap.New[string, Column](),
 	}
+}
+
+func (t Table) ColumnIndexes() map[string]int {
+	out := make(map[string]int, t.Columns.Len())
+	var i int
+	for column := t.Columns.Oldest(); column != nil; column = column.Next() {
+		out[column.Key] = i
+		i++
+	}
+	return out
 }
 
 type CreateTable Table
@@ -122,7 +131,7 @@ const (
 func (e Expression) writeTo(w *writeWarpper) {
 	switch e.Type {
 	default:
-		w.additionalError(fmt.Errorf("ExpressionType %d not handled", e.Type))
+		w.additionalError(seederrors.NewSystemError("ExpressionType %d not handled", e.Type))
 	case ValueExpression:
 		w.write([]byte(e.A))
 	case UnaryExpression:

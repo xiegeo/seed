@@ -5,6 +5,8 @@ import (
 	"math"
 	"math/big"
 	"time"
+
+	"github.com/xiegeo/seed/seederrors"
 )
 
 type CodeName string
@@ -96,7 +98,7 @@ type FieldTypeSetting any
 func GetFieldTypeSetting[T FieldTypeSetting](f *Field) (T, error) {
 	v, ok := f.FieldTypeSetting.(T)
 	if !ok {
-		return v, fmt.Errorf("can not get a %T from field %s with type %s and setting of %T", v, f.Name, f.FieldType, f.FieldTypeSetting)
+		return v, seederrors.NewSystemError("can not get a %T from field %s with type %s and setting of %T", v, f.Name, f.FieldType, f.FieldTypeSetting)
 	}
 	return v, nil
 }
@@ -246,7 +248,7 @@ type RealSetting struct {
 	Unit *Unit
 }
 
-func (s RealSetting) Valid() bool {
+func (s *RealSetting) Valid() bool {
 	switch s.Standard {
 	case CustomReal:
 		switch {
@@ -263,7 +265,7 @@ func (s RealSetting) Valid() bool {
 			s.MinFloat = valuePointer(math.Inf(-1))
 		}
 		if s.MaxFloat == nil {
-			s.MinFloat = valuePointer(math.Inf(1))
+			s.MaxFloat = valuePointer(math.Inf(1))
 		}
 	}
 	return true
@@ -294,8 +296,8 @@ func (s RealSetting) Covers(s2 RealSetting) bool {
 			s.MinMantissa.Cmp(s2.MinMantissa) == 1,
 			s.MaxMantissa.Cmp(s2.MaxMantissa) == -1,
 			s.Base != s2.Base,
-			*s.MinExponent > *s.MinExponent,
-			*s.MaxExponent < *s.MaxExponent:
+			*s.MinExponent > *s2.MinExponent,
+			*s.MaxExponent < *s2.MaxExponent:
 			return false
 		}
 		return true

@@ -2,11 +2,11 @@ package sqldb
 
 import (
 	"context"
-	"fmt"
 
 	orderedmap "github.com/wk8/go-ordered-map/v2"
 
 	"github.com/xiegeo/seed"
+	"github.com/xiegeo/seed/seederrors"
 )
 
 type domainInfo struct {
@@ -49,27 +49,25 @@ func (db *DB) objectInfoFromObject(ctx context.Context, d *seed.Domain, ob seed.
 		info := fieldInfo{
 			Field: f,
 		}
-		info.fieldDefinition, err = db.generateFieldDefinition(&f)
+		info.fieldDefinition, err = db.generateFieldDefinition(&info.Field)
 		if err != nil {
 			return objectInfo{}, err
 		}
 		_, present := fields.Set(f.Name, info)
 		if present {
-			return objectInfo{}, fmt.Errorf(`field with name="%s" inserted again, this should never happen`, f.Name)
+			return objectInfo{}, seederrors.NewSystemError(`field with name="%s" inserted again, this should never happen`, f.Name)
 		}
 		for _, col := range info.cols {
 			_, present = table.Columns.Set(col.Name, col)
 			if present {
-				return objectInfo{}, fmt.Errorf(`column with name="%s" inserted again, this should never happen`, col.Name)
+				return objectInfo{}, seederrors.NewSystemError(`column with name="%s" inserted again, this should never happen`, col.Name)
 			}
 		}
-		for _, check := range info.checks {
-			table.Constraint.Checks = append(table.Constraint.Checks, check)
-		}
+		table.Constraint.Checks = append(table.Constraint.Checks, info.checks...)
 		for _, helper := range info.tables {
 			_, present = helpers[helper.Name]
 			if present {
-				return objectInfo{}, fmt.Errorf(`table with name="%s" inserted again, this should never happen`, helper.Name)
+				return objectInfo{}, seederrors.NewSystemError(`table with name="%s" inserted again, this should never happen`, helper.Name)
 			}
 			helpers[helper.Name] = helper
 		}
@@ -85,4 +83,49 @@ func (db *DB) objectInfoFromObject(ctx context.Context, d *seed.Domain, ob seed.
 type fieldInfo struct {
 	seed.Field
 	fieldDefinition
+	encoder func(any) ([]any, error)
+	decoder func([]any) (any, error)
+}
+
+func (f *fieldInfo) Encoder() func(any) ([]any, error) {
+	if f.encoder == nil {
+		return func(value any) ([]any, error) {
+			return []any{value}, nil
+		}
+	}
+	return f.encoder
+}
+
+func (f *fieldInfo) Decoder() func([]any) (any, error) {
+	if f.encoder == nil {
+		return func(cols []any) (any, error) {
+			if len(cols) != 1 {
+				return nil, seederrors.NewSystemError("decoder is not defined on a fieldInfo with %d columns", len(cols))
+			}
+			return cols[0], nil
+		}
+	}
+	return f.decoder
+}
+
+func (f *fieldInfo) WarpEncoder(fc func(any) (any, error)) {
+	next := f.Encoder()
+	f.encoder = func(value any) ([]any, error) {
+		value, err := fc(value)
+		if err != nil {
+			return nil, err
+		}
+		return next(value)
+	}
+}
+
+func (f *fieldInfo) WarpDecoder(fc func(any) (any, error)) {
+	before := f.Decoder()
+	f.decoder = func(cols []any) (any, error) {
+		value, err := before(cols)
+		if err != nil {
+			return nil, err
+		}
+		return fc(value)
+	}
 }
