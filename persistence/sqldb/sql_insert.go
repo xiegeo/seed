@@ -1,11 +1,29 @@
 package sqldb
 
 import (
+	"context"
 	"reflect"
 
 	"github.com/xiegeo/seed"
 	"github.com/xiegeo/seed/seederrors"
 )
+
+// InsertObjects insert data keyed by object code name. If value is a slice, it's treated as a list of values.
+func (db *DB) InsertObjects(ctx context.Context, v map[seed.CodeName]any) error {
+	bt := newBatchTables(db.defaultDomain)
+	for name, value := range v {
+		err := ctx.Err()
+		if err != nil {
+			return err
+		}
+		err = bt.appendData(name, value)
+		if err != nil {
+			return err
+		}
+	}
+	return db.doTransaction(ctx, func(txc txContext) error {
+	})
+}
 
 type batchTables struct {
 	domain domainInfo
@@ -44,8 +62,8 @@ func (b *batchTables) appendData(objectName seed.CodeName, data any) error {
 }
 
 func (b *batchTables) appendValue(obInfo *objectInfo, dataValue reflect.Value) error {
-	dataValue = getElem(dataValue)
-	if dataValue.IsNil() {
+	dataValue, isNil := getElem(dataValue)
+	if isNil {
 		return nil
 	}
 	if !dataValue.IsValid() {
@@ -63,27 +81,58 @@ func (b *batchTables) appendValue(obInfo *objectInfo, dataValue reflect.Value) e
 		}
 		return nil
 	case reflect.Map:
-		if dataValue.Type().ConvertibleTo(reflect.TypeOf(map[string]any{})) {
-			return b.appendMapValue(obInfo, dataValue.Interface().(map[string]any))
+		mapAsInterface := dataValue.Interface()
+		mapTyped, ok := mapAsInterface.(map[string]any)
+		if ok {
+			return b.appendMapValue(obInfo, mapTyped)
 		}
 		return seederrors.NewSystemError("map of type %s is not handled, only map[string]any{} is supported", dataValue.Type())
 	}
 }
 
 func (b *batchTables) appendMapValue(obInfo *objectInfo, m map[string]any) error {
+	table := b.getTableRows(obInfo)
+	row := make([]any, 0, len(table.columnIndexes))
+	for current := obInfo.fields.Oldest(); current != nil; current = current.Next() {
+		fieldName := current.Key
+		fieldValue := m[string(fieldName)]
+		valueColumns := current.Value.cols
+		if current.Value.Nullable && isNilPointer(fieldValue) {
+			row = append(row, make([]any, len(valueColumns))...) // fill the column of this value with nils
+			continue
+		}
+		values, err := current.Value.encoder(fieldValue)
+		if err != nil {
+			return err
+		}
+		row = append(row, values...)
+	}
+	if len(row) != len(table.columnIndexes) {
+		return seederrors.NewSystemError("can not set %d values to %d columns", len(row), len(table.columnIndexes))
+	}
+	table.rows = append(table.rows, row)
+	return nil
 }
 
-// getElem removes all interface and pointer wrappers
-func getElem(v reflect.Value) reflect.Value {
+// getElem removes all interface and pointer wrappers. If value ends in nil pointer, true is returned
+func getElem(v reflect.Value) (reflect.Value, bool) {
 	for {
 		switch v.Kind() {
 		case reflect.Interface, reflect.Pointer:
 			if v.IsNil() {
-				return v
+				return v, true
 			}
 			v = v.Elem()
 		default:
-			return v
+			return v, false
 		}
 	}
+}
+
+func isNilPointer(a any) bool {
+	if a == nil {
+		return true
+	}
+	_, isNil := getElem(reflect.ValueOf(a))
+	return isNil
 }

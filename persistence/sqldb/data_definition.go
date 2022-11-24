@@ -14,6 +14,10 @@ func (db *DB) AddDomain(ctx context.Context, d *seed.Domain) error {
 	if _, ok := db.domains[d.Name]; ok {
 		return seederrors.NewCodeNameExistsError(d.Name, seederrors.ThingTypeDomain, "")
 	}
+	err := d.NameCheck()
+	if err != nil {
+		return err
+	}
 	domainInfo, err := db.domainInfoFromDomain(ctx, d)
 	if err != nil {
 		return err
@@ -23,6 +27,9 @@ func (db *DB) AddDomain(ctx context.Context, d *seed.Domain) error {
 	})
 	if err != nil {
 		return err
+	}
+	if db.defaultDomain.Name == "" {
+		db.defaultDomain = domainInfo // the first domain added is the default domain
 	}
 	db.domains[d.Name] = domainInfo
 	return nil

@@ -14,7 +14,8 @@ type DB struct {
 
 	option *DBOption
 
-	domains map[seed.CodeName]domainInfo
+	defaultDomain domainInfo
+	domains       map[seed.CodeName]domainInfo
 }
 
 type DBOption struct {

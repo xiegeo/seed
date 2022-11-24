@@ -88,8 +88,9 @@ var _failbackTimeStampCoverage = seed.TimeStampSetting{
 	Scale: time.Nanosecond,
 }
 
+const day = 24 * time.Hour
+
 func utcTimeLayoutForScale(scale time.Duration) string {
-	day := 24 * time.Hour
 	if scale%day == 0 {
 		return "2006-01-02"
 	} else if scale%time.Second == 0 {
@@ -116,37 +117,43 @@ func utcTimeStringFuncForLayout(layout string) func(any) (any, error) {
 	}
 }
 
-func (db *DB) timeStampFailback(f *seed.Field, setting seed.TimeStampSetting) (*fieldInfo, error) {
-	if !setting.WithTimeZoneOffset { // use strings if time stamp without time zone is not supported natively.
-		if !_failbackTimeStampCoverage.Covers(setting) {
-			return nil, seederrors.NewFieldNotSupportedError(f.FieldType.String(), f.Name, "FieldTypeSetting")
-		}
-		layout := utcTimeLayoutForScale(setting.Scale)
-		codePoints := int64(len(layout))
+func (db *DB) utcTimeStampFailback(f *seed.Field, setting seed.TimeStampSetting) (*fieldInfo, error) {
+	if !_failbackTimeStampCoverage.Covers(setting) {
+		return nil, seederrors.NewFieldNotSupportedError(f.FieldType.String(), f.Name, "FieldTypeSetting")
+	}
+	layout := utcTimeLayoutForScale(setting.Scale)
+	codePoints := int64(len(layout))
 
-		utcField := *f
-		utcField.FieldType = seed.String
-		utcField.FieldTypeSetting = seed.StringSetting{
-			MinCodePoints: codePoints,
-			MaxCodePoints: codePoints,
+	utcField := *f
+	utcField.FieldType = seed.String
+	utcField.FieldTypeSetting = seed.StringSetting{
+		MinCodePoints: codePoints,
+		MaxCodePoints: codePoints,
+	}
+	fi, err := db.generateFieldInfoSub(&utcField)
+	if err != nil {
+		return nil, err
+	}
+	fi.WarpEncoder(utcTimeStringFuncForLayout(layout))
+	fi.WarpDecoder(func(a any) (any, error) {
+		vt, ok := a.(string)
+		if !ok {
+			return nil, seederrors.NewSystemError("decoder expected string but got %T", a)
 		}
-		fi, err := db.generateFieldInfoSub(&utcField)
-		if err != nil {
-			return nil, err
-		}
-		fi.WarpEncoder(utcTimeStringFuncForLayout(layout))
-		fi.WarpDecoder(func(a any) (any, error) {
-			vt, ok := a.(string)
-			if !ok {
-				return nil, seederrors.NewSystemError("decoder expected string but got %T", a)
-			}
-			return time.Parse(layout, vt)
-		})
+		return time.Parse(layout, vt)
+	})
+	return fi, nil
+}
+
+func (db *DB) timeStampFailback(f *seed.Field, setting seed.TimeStampSetting) (*fieldInfo, error) {
+	if !setting.WithTimeZoneOffset {
+		// use strings if time stamp without time zone is not supported natively.
+		return db.utcTimeStampFailback(f, setting)
 	}
 	setting.WithTimeZoneOffset = false
 	f2 := *f
 	f2.FieldTypeSetting = setting
-	utcTime, err := db.generateFieldInfoSub(&f2) // don't call timeStampFailback directly because time stamp without time zone could be supported natively.
+	utcTime, err := db.generateFieldInfoSub(&f2) // don't call utcTimeStampFailback directly because time stamp without time zone could be supported natively.
 	if err != nil {
 		return nil, err
 	}
@@ -192,6 +199,11 @@ func (db *DB) timeStampFailback(f *seed.Field, setting seed.TimeStampSetting) (*
 			if err != nil {
 				return nil, err
 			}
+			offsetTyped, ok := offsetInter.(int64)
+			if !ok {
+				return nil, seederrors.NewSystemError("decoder expected int64 for time zone offset, but got %T", offsetInter)
+			}
+			return utcTyped.In(time.FixedZone("", int(offsetTyped))), nil
 		},
 	}, nil
 }

@@ -18,8 +18,6 @@ type FieldValue struct {
 }
 
 type ReferenceValue struct {
-	object CodeName
-	id     int64
 	ObjectValue
 }
 
