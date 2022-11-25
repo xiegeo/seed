@@ -2,26 +2,50 @@ package sqldb
 
 import (
 	"context"
+	"database/sql"
+	"fmt"
 	"reflect"
+	"strings"
 
 	"github.com/xiegeo/seed"
 	"github.com/xiegeo/seed/seederrors"
 )
 
 // InsertObjects insert data keyed by object code name. If value is a slice, it's treated as a list of values.
+// All inserts must be done or none at all.
 func (db *DB) InsertObjects(ctx context.Context, v map[seed.CodeName]any) error {
-	bt := newBatchTables(db.defaultDomain)
+	return db.InsertDomainObjects(ctx, &db.defaultDomain, v)
+}
+
+func (db *DB) InsertDomainObjects(ctx context.Context, domain *domainInfo, v map[seed.CodeName]any) error {
+	batch := newBatchTables(domain)
 	for name, value := range v {
 		err := ctx.Err()
 		if err != nil {
 			return err
 		}
-		err = bt.appendData(name, value)
+		err = batch.appendData(name, value)
 		if err != nil {
 			return err
 		}
 	}
 	return db.doTransaction(ctx, func(txc txContext) error {
+		for tableName, tableContent := range batch.tables {
+			if len(tableContent.rows) == 0 {
+				continue
+			}
+			stmt, err := tableContent.insertRowStmt(txc, tableName, db.option.TranslateStatement)
+			if err != nil {
+				return err
+			}
+			for _, row := range tableContent.rows {
+				_, err = stmt.Exec(row...)
+				if err != nil {
+					return err
+				}
+			}
+		}
+		return nil
 	})
 }
 
@@ -35,9 +59,29 @@ type batchRows struct {
 	rows          [][]any // [rows][cols]value
 }
 
-func newBatchTables(domain domainInfo) *batchTables {
+func (b *batchRows) insertRowStmt(txc txContext, tableName string, q func(string) string) (*sql.Stmt, error) {
+	colNames := make([]string, len(b.columnIndexes))
+	for name, i := range b.columnIndexes {
+		if colNames[i] != "" {
+			return nil, seederrors.NewSystemError("table %s columnIndexes %v must be a 1 to 1 map, got repeated %d", tableName, b.columnIndexes, i)
+		}
+		colNames[i] = name
+	}
+	return txc.Prepare(q(fmt.Sprintf("INSERT INTO %s (%s) VALUES (%s)",
+		tableName, strings.Join(colNames, ", "), joinNth("?", ",", len(colNames)))))
+}
+
+func joinNth(s, sep string, n int) string {
+	slice := make([]string, n)
+	for i := range slice {
+		slice[i] = s
+	}
+	return strings.Join(slice, sep)
+}
+
+func newBatchTables(domain *domainInfo) *batchTables {
 	return &batchTables{
-		domain: domain,
+		domain: *domain,
 		tables: make(map[string]batchRows),
 	}
 }
@@ -67,11 +111,11 @@ func (b *batchTables) appendValue(obInfo *objectInfo, dataValue reflect.Value) e
 		return nil
 	}
 	if !dataValue.IsValid() {
-		return seederrors.NewSystemError(`reflected value "%s" is not valid`, dataValue)
+		return seederrors.NewSystemError(`reflected value (%s) is not valid`, dataValue)
 	}
 	switch dataValue.Kind() {
 	default:
-		return seederrors.NewSystemError("Kind %s in data of type %s not handled", dataValue.Kind(), dataValue.Type())
+		return seederrors.NewSystemError("Kind %s in input of type %s not handled, use map for single data and slice for batch, structs will be supported in the future", dataValue.Kind(), dataValue.Type())
 	case reflect.Array, reflect.Slice:
 		for i := 0; i < dataValue.Len(); i++ {
 			err := b.appendValue(obInfo, dataValue.Index(i))
@@ -81,27 +125,32 @@ func (b *batchTables) appendValue(obInfo *objectInfo, dataValue reflect.Value) e
 		}
 		return nil
 	case reflect.Map:
-		mapAsInterface := dataValue.Interface()
-		mapTyped, ok := mapAsInterface.(map[string]any)
-		if ok {
-			return b.appendMapValue(obInfo, mapTyped)
+		switch mapTyped := dataValue.Interface().(type) {
+		case map[string]any:
+			return appendMapValue(b, obInfo, mapTyped)
+		case map[seed.CodeName]any:
+			return appendMapValue(b, obInfo, mapTyped)
 		}
-		return seederrors.NewSystemError("map of type %s is not handled, only map[string]any{} is supported", dataValue.Type())
+		return seederrors.NewSystemError("map of type %s is not handled, only map[string|seed.CodeName]any{} is supported", dataValue.Type())
 	}
 }
 
-func (b *batchTables) appendMapValue(obInfo *objectInfo, m map[string]any) error {
+func appendMapValue[K ~string](b *batchTables, obInfo *objectInfo, m map[K]any) error {
 	table := b.getTableRows(obInfo)
 	row := make([]any, 0, len(table.columnIndexes))
 	for current := obInfo.fields.Oldest(); current != nil; current = current.Next() {
 		fieldName := current.Key
-		fieldValue := m[string(fieldName)]
+		fieldValue := m[K(fieldName)]
 		valueColumns := current.Value.cols
-		if current.Value.Nullable && isNilPointer(fieldValue) {
-			row = append(row, make([]any, len(valueColumns))...) // fill the column of this value with nils
-			continue
+		if isNilPointer(fieldValue) {
+			if current.Value.Nullable {
+				row = append(row, make([]any, len(valueColumns))...) // fill the column of this value with nils
+				continue
+
+			}
+			return seederrors.NewValueRequiredError(fieldName)
 		}
-		values, err := current.Value.encoder(fieldValue)
+		values, err := current.Value.Encoder()(fieldValue)
 		if err != nil {
 			return err
 		}
@@ -111,6 +160,7 @@ func (b *batchTables) appendMapValue(obInfo *objectInfo, m map[string]any) error
 		return seederrors.NewSystemError("can not set %d values to %d columns", len(row), len(table.columnIndexes))
 	}
 	table.rows = append(table.rows, row)
+	b.tables[obInfo.mainTable.Name] = table
 	return nil
 }
 

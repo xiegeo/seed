@@ -32,6 +32,18 @@ func (e FieldNotFoundError) Error() string {
 	return fmt.Sprintf(`field "%s" is not found`, e.FieldName)
 }
 
+type ValueRequiredError struct {
+	FieldName string
+}
+
+func NewValueRequiredError[S anyString](fieldName S) ValueRequiredError {
+	return ValueRequiredError{FieldName: string(fieldName)}
+}
+
+func (e ValueRequiredError) Error() string {
+	return fmt.Sprintf(`field "%s" is required`, e.FieldName)
+}
+
 type ObjectNotFoundError struct {
 	ObjectName string
 }

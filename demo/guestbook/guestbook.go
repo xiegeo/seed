@@ -15,46 +15,54 @@ func Domain() seed.Domain {
 			Name: "guestbook",
 		},
 		Objects: []seed.Object{
-			{
-				Thing: seed.Thing{
-					Name: "guest",
-				},
-				FieldProperties: seed.FieldProperties{
-					Fields: []seed.Field{
-						TimeField(),
-						NameField(),
-						// EventsField(), // todo: list and ref types
-						NumberOfGuestsField(),
-						// ContactField(), // todo: combination type
-						NoteField(),
-					},
-					Identities: []seed.Identity{{
-						Fields: []seed.CodeName{TimeField().Name, NameField().Name},
-					}},
-				},
-			}, {
-				Thing: seed.Thing{
-					Name: "event",
-				},
-				FieldProperties: seed.FieldProperties{
-					Fields: []seed.Field{
-						StartTimeField(),
-						EndTimeField(),
-						// EventNameField(), // todo:i18n
-						PublishField(),
-						MaxNumberOfGuestsField(),
-						// EventDescriptionField(), // todo:i18n
-					},
-					Identities: []seed.Identity{{
-						Fields: []seed.CodeName{EventNameField().Name},
-					}},
-					Ranges: []seed.Range{{
-						Start:           StartTimeField().Name,
-						End:             EndTimeField().Name,
-						IncludeEndValue: false,
-					}},
-				},
+			Guest(), Event(),
+		},
+	}
+}
+
+func Guest() seed.Object {
+	return seed.Object{
+		Thing: seed.Thing{
+			Name: "guest",
+		},
+		FieldProperties: seed.FieldProperties{
+			Fields: []seed.Field{
+				TimeField(),
+				NameField(),
+				// EventsField(), // todo: list and ref types
+				NumberOfGuestsField(),
+				// ContactField(), // todo: combination type
+				NoteField(),
 			},
+			Identities: []seed.Identity{{
+				Fields: []seed.CodeName{TimeField().Name, NameField().Name},
+			}},
+		},
+	}
+}
+
+func Event() seed.Object {
+	return seed.Object{
+		Thing: seed.Thing{
+			Name: "event",
+		},
+		FieldProperties: seed.FieldProperties{
+			Fields: []seed.Field{
+				StartTimeField(),
+				EndTimeField(),
+				// EventNameField(), // todo:i18n
+				PublishField(),
+				MaxNumberOfGuestsField(),
+				// EventDescriptionField(), // todo:i18n
+			},
+			Identities: []seed.Identity{{
+				Fields: []seed.CodeName{EventNameField().Name},
+			}},
+			Ranges: []seed.Range{{
+				Start:           StartTimeField().Name,
+				End:             EndTimeField().Name,
+				IncludeEndValue: false,
+			}},
 		},
 	}
 }
@@ -144,9 +152,10 @@ func StartTimeField() seed.Field {
 		language.Chinese: "开始时间",
 	}
 	f.FieldTypeSetting = seed.TimeStampSetting{
-		Min:   time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC),
-		Max:   time.Date(3000, 1, 1, 0, 0, 0, 0, time.UTC),
-		Scale: time.Minute * 5,
+		Min:                time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC),
+		Max:                time.Date(3000, 1, 1, 0, 0, 0, 0, time.UTC),
+		Scale:              time.Minute * 5,
+		WithTimeZoneOffset: true,
 	}
 	return f
 }

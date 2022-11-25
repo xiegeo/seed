@@ -46,14 +46,11 @@ func (db *DB) objectInfoFromObject(ctx context.Context, d *seed.Domain, ob seed.
 	table.Option = db.option.TableOption
 	helpers := make(map[string]Table)
 	for _, f := range ob.Fields {
-		info := fieldInfo{
-			Field: f,
-		}
-		info.fieldDefinition, err = db.generateFieldDefinition(&info.Field)
+		info, err := db.generateFieldInfo(&f)
 		if err != nil {
 			return objectInfo{}, err
 		}
-		_, present := fields.Set(f.Name, info)
+		_, present := fields.Set(f.Name, *info)
 		if present {
 			return objectInfo{}, seederrors.NewSystemError(`field with name="%s" inserted again, this should never happen`, f.Name)
 		}
