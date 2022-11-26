@@ -23,8 +23,11 @@ func timeWithMinute(t *testing.T, value string) time.Time {
 func TestAddDomain(t *testing.T) {
 	ctx := context.TODO()
 	rawDB, err := sql.Open("sqlite3", ":memory:")
-	// rawDB, err := sql.Open("sqlite3", "testdata") // use this to inspect the database after
+	// rawDB, err := sql.Open("sqlite3", "testdata.sqlite3") // use this to inspect the database after
 	require.NoError(t, err)
+	defer func() {
+		require.NoError(t, rawDB.Close())
+	}()
 	db, err := sqldb.New(rawDB, sqldb.Sqlite)
 	require.NoError(t, err)
 	guestbook := Domain()
