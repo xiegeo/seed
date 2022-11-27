@@ -91,7 +91,7 @@ var _failbackTimeStampCoverage = seed.TimeStampSetting{
 const day = 24 * time.Hour
 
 func utcTimeLayoutForScale(scale time.Duration) string {
-	if scale%day == 0 {
+	if scale%day == 0 { //nolint:gocritic // if else represents condition ordering much more strongly than switch case
 		return "2006-01-02"
 	} else if scale%time.Second == 0 {
 		return "2006-01-02T15:04:05"

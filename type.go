@@ -42,8 +42,8 @@ type FieldProperties struct {
 
 type Field struct {
 	Thing
-	FieldType
 	FieldTypeSetting
+	FieldType
 	IsI18n   bool // if true, different values for different locals is possible. Only String and Binary need to be supported.
 	Nullable bool // if true, difference between null and zero values are significate.
 }
@@ -234,9 +234,9 @@ func (s *Unit) Covers(s2 *Unit) bool {
 
 type RealSetting struct {
 	Standard    RealStandard
+	Base        uint8 // base 2 and 10 are most common, others are unlikely to be supported.
 	MinMantissa *big.Int
 	MaxMantissa *big.Int
-	Base        uint8  // base 2 and 10 are most common, others are unlikely to be supported.
 	MinExponent *int64 // pointer to diff zero vs not set
 	MaxExponent *int64
 

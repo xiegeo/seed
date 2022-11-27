@@ -4,11 +4,14 @@
 linters-settings:
   govet:
     check-shadowing: true
+    # Enable all analyzers.
+    # Default: false
+    enable-all: true
   varnamelen:
     # The longest distance, in source lines, that is being considered a "small scope".
     # Variables used in at most this many lines will be ignored.
     # Default: 5
-    max-distance: 10
+    max-distance: 15
     # Optional list of variable names that should be ignored completely.
     # Default: []
     ignore-names: [vt,tx,db]
@@ -16,8 +19,15 @@ linters-settings:
     # An array of strings that specify globs of packages to ignore.
     # Default: []
     ignorePackageGlobs:
+      - github.com/xiegeo/seed # not external
       - github.com/cockroachdb/errors/* # error tools
       - database/sql # todo
+      - context
+      - time
+    # An array of strings that specify regular expressions of interfaces to ignore.
+    # Default: []
+    ignoreInterfaceRegexps:
+      - context.Context # ignore again as interface
   gci:
     # Default: ["standard", "default"]
     sections:
@@ -74,10 +84,35 @@ linters:
 
 issues:
   exclude-rules:
+  # revisit after dictionary rewrite
+    - text: "fieldalignment: struct with .* pointer bytes could be .*"
+      linters: [govet]
+
+  # case by case, but not worse
+    - text: "( MakeDirectedCondition is 11,)|( timeStampFailback is 11,)"
+      linters:
+        - cyclop
+
+  # exception to a style
+    - text: "_SQLITE_" # "_" allowed for external constants
+      linters:
+        - revive
+        - stylecheck
+
+  # expand on linter-settings
     - text: "parameter name .* is too short for the scope of its usage"
       linters:
         - varnamelen # don't check parameter names
 
+    - text: "missing cases in switch of type reflect.Kind"
+      linters:
+        - exhaustive
+    
+    - text: "fieldalignment: struct with .* pointer bytes could be .*"
+      linters:
+        - 
+
+  # tests and demo rules
     - path: "(.+)_test.go"
       linters:
         - maintidx
@@ -94,4 +129,22 @@ issues:
         - varnamelen
 
 output:
-  format: line-number
+  # Format: colored-line-number|line-number|json|tab|checkstyle|code-climate|junit-xml|github-actions
+  #
+  # Multiple can be specified by separating them by comma, output can be provided
+  # for each of them by separating format name and path by colon symbol.
+  # Output path can be either `stdout`, `stderr` or path to the file to write to.
+  # Example: "checkstyle:report.json,colored-line-number"
+  #
+  # Default: colored-line-number
+  # format: line-number # use this when color breaks stuff
+
+  # Sort results by: filepath, line and column.
+  sort-results: true # Stable output. otherwise a problem line might jump around when one of many in the same line is fixed or ignored.
+  # Make issues output unique by line.
+  # Default: true
+  uniq-by-line: false
+
+# Allow multiple parallel golangci-lint instances running.
+# If false (default) - golangci-lint acquires file lock on start.
+allow-parallel-runners: true # allow usage when IDE is also running a lint

@@ -146,7 +146,6 @@ func appendMapValue[K ~string](b *batchTables, obInfo *objectInfo, m map[K]any) 
 			if current.Value.Nullable {
 				row = append(row, make([]any, len(valueColumns))...) // fill the columns of this value with nils
 				continue
-
 			}
 			return seederrors.NewValueRequiredError(fieldName)
 		}

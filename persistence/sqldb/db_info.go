@@ -45,8 +45,9 @@ func (db *DB) objectInfoFromObject(ctx context.Context, d *seed.Domain, ob seed.
 	table := InitTable(tableName)
 	table.Option = db.option.TableOption
 	helpers := make(map[string]Table)
-	for _, f := range ob.Fields {
-		info, err := db.generateFieldInfo(&f)
+	for i := range ob.Fields {
+		f := &ob.Fields[i]
+		info, err := db.generateFieldInfo(f)
 		if err != nil {
 			return objectInfo{}, err
 		}

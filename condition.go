@@ -1,5 +1,11 @@
 package seed
 
+import (
+	"fmt"
+
+	"github.com/xiegeo/seed/seederrors"
+)
+
 // Condition represents boolean operations on branch nodes and value to boolean operations on leaves.
 //
 // The root condition can use any operator except PushUp. PushUp sudo condition exist only in the physical
@@ -13,6 +19,10 @@ type Condition struct {
 
 // Path is a list of code names to walk through references and fields
 type Path []CodeName
+
+func NewPath(ns ...CodeName) Path {
+	return Path(ns)
+}
 
 type _nextFieldState int
 
@@ -30,10 +40,13 @@ const (
 //
 // Both []Condition and Condition matches Children. Both []Path and Path matches FieldPaths
 func MakeDirectedCondition(op Op, operands ...any) (Condition, error) {
+	if !op.IsDirectional() {
+		return Condition{}, seederrors.NewSystemError("%v is not directional, MakeDirectedCondition should only be used for directional operations", op)
+	}
 	root := Condition{
 		Op: op,
 	}
-	var state _nextFieldState
+	state := _literalState
 	for i := len(operands) - 1; i >= 0; i-- { // consume operands in reverse
 		switch vt := operands[i].(type) {
 		default: // literal
@@ -56,18 +69,18 @@ func MakeDirectedCondition(op Op, operands ...any) (Condition, error) {
 			if state == _childrenState {
 				root.Children = append(root.Children, Condition{Op: PushUp, FieldPaths: vt})
 			} else {
-				root.FieldPaths = append(root.FieldPaths, vt...)
+				root.FieldPaths = reverseAppend(root.FieldPaths, vt...)
 				state = _fieldPathState
 			}
 		case Condition: // one child
 			root.Children = append(root.Children, vt)
 			state = _childrenState
 		case []Condition: // many children
-			root.Children = append(root.Children, vt...)
+			root.Children = reverseAppend(root.Children, vt...)
 			state = _childrenState
 		}
 	}
-	// operands of the same type where appended in reverse order
+	// operands of the same type were appended in reverse order
 	reverseSlice(root.Children)
 	reverseSlice(root.FieldPaths)
 	return root, nil
@@ -79,6 +92,13 @@ func reverseSlice[T any](s []T) {
 		i--
 		s[i], s[mirror] = s[mirror], s[i]
 	}
+}
+
+func reverseAppend[T any](a []T, b ...T) []T {
+	for i := len(b) - 1; i >= 0; i-- {
+		a = append(a, b[i])
+	}
+	return a
 }
 
 // ForEach loops through each operand to call a function to handle each case.
@@ -106,6 +126,7 @@ func (c Condition) ForEach(cf func(Condition), pf func([]CodeName), lf func(any)
 // When realizing conditions, conditions should be simplified to match closely with underling implementation.
 type Op uint8
 
+//nolint:varnamelen
 const (
 	// Push up elements to the parent Condition, useful for custom ordering of operands.
 	// When evaluated, PushUp can not be the top condition's operator.
@@ -174,6 +195,9 @@ var _opString = [OpMax + 1]string{
 }
 
 func (op Op) String() string {
+	if op > OpMax {
+		return fmt.Sprintf("seed.Op(%d)", op)
+	}
 	return _opString[op]
 }
 
@@ -185,4 +209,8 @@ var _opInverse = [OpMax]Op{
 
 func (op Op) Inverse() Op {
 	return _opInverse[op-1]
+}
+
+func (op Op) IsDirectional() bool {
+	return op >= Lt
 }

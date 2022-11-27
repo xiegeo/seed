@@ -15,6 +15,7 @@ import (
 )
 
 func timeWithMinute(t *testing.T, value string) time.Time {
+	t.Helper()
 	out, err := time.Parse("2006-01-02T15:04", value)
 	require.NoError(t, err)
 	return out
