@@ -7,7 +7,7 @@ type NameRule string
 const (
 	NameEmpty         NameRule = `name can not be empty`
 	NameUnderline     NameRule = `can not start with "_", end with "_", or have two or more "_" consecutively`
-	NameCharacter     NameRule = "only letters [a-zA-Z], numbers [0-9] allowed, and must start with a letter"
+	NameCharacter     NameRule = `only letters [a-zA-Z], numbers [0-9], or "_" allowed, and must start with a letter`
 	NameVersion       NameRule = "version like character sequences can not come at the beginning or middle of names, and can not start with 0"
 	NameVersionNumber NameRule = "version number must be in 2 to 99"
 )

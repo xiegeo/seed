@@ -33,6 +33,8 @@ func TestSimplify(t *testing.T) {
 		{name: "vv2", simple: []byte("v"), version: 2},
 		{name: "v2v3", err: seederrors.NewNameNotAllowedError("v2v3", seederrors.NameVersion)},
 		{name: "xv2x", err: seederrors.NewNameNotAllowedError("xv2x", seederrors.NameVersion)},
+		{name: "İ", // could lower case to i, not allowed for now, use I instead.
+			err: seederrors.NewNameNotAllowedError("İ", seederrors.NameCharacter)},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

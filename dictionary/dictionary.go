@@ -13,11 +13,16 @@ type Dictionary[K ~string, V any] struct {
 	prefixIndex prefixIndex[[]K]
 }
 
-func NewDictionary[K ~string, V any]() *Dictionary[K, V] {
+func New[K ~string, V any]() *Dictionary[K, V] {
 	return &Dictionary[K, V]{
 		m:           make(map[K]V),
 		prefixIndex: makePrefixIndex[[]K](),
 	}
+}
+
+func (d *Dictionary[K, V]) Get(k K) (V, bool) {
+	v, ok := d.m[k]
+	return v, ok
 }
 
 func (d *Dictionary[K, V]) set(k K, v V, simple []byte, version int8) error {

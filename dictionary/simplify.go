@@ -11,7 +11,7 @@ import (
 
 var (
 	checkUnderline     = regexp.MustCompile("(^_)|(__)|(_$)")
-	checkCharacter     = regexp.MustCompile("^[a-z][a-z0-9]*$")
+	checkCharacter     = regexp.MustCompile("^[a-zA-Z][_a-zA-Z0-9]*$")
 	checkEndVersion    = regexp.MustCompile("v[0-9]+$")
 	checkNotEndVersion = regexp.MustCompile("(^v[0-9])|(v[0-9][a-z])")
 )
@@ -27,14 +27,14 @@ func Simplify[T ~string](name T) ([]byte, int8, error) {
 	if errorsFound := checkUnderline.FindAllStringIndex(ns, -1); len(errorsFound) != 0 {
 		return nil, 0, seederrors.NewNameNotAllowedError(name, seederrors.NameUnderline, errorsFound...)
 	}
-	lowerCased := strings.ToLower(ns)
-	simpleBytes := bytes.Join(bytes.Split([]byte(lowerCased), []byte("_")), nil)
-	if len(checkCharacter.Find(simpleBytes)) == 0 {
-		if len(simpleBytes) == 0 {
+	if len(checkCharacter.FindString(ns)) == 0 {
+		if len(ns) == 0 {
 			return nil, 0, seederrors.NewNameNotAllowedError(name, seederrors.NameEmpty)
 		}
 		return nil, 0, seederrors.NewNameNotAllowedError(name, seederrors.NameCharacter)
 	}
+	lowerCased := strings.ToLower(ns)
+	simpleBytes := bytes.Join(bytes.Split([]byte(lowerCased), []byte("_")), nil)
 	if errorsFound := checkNotEndVersion.FindAllIndex(simpleBytes, -1); len(errorsFound) != 0 {
 		return nil, 0, seederrors.NewNameNotAllowedError(name, seederrors.NameVersion)
 	}
