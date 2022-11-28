@@ -71,6 +71,7 @@ linters:
     - gochecknoinits # Checks that no init functions are present in Go code
     - paralleltest # only need to care when tests take a long time.
     - nonamedreturns # name returns can add clarity to function signatures, or save declare a variable just to hold return variable.
+    - testpackage # allow write unit test for private function
 
     # style linters that's better replaced by eyeballs
     - wsl # enforce blank line rules
@@ -125,6 +126,7 @@ issues:
       linters:
         - maintidx
         - unused
+        - funlen
         
     - path: "(.+)_test.go"
       linters:

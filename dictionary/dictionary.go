@@ -1,8 +1,9 @@
 package dictionary
 
 import (
-	"github.com/xiegeo/seed/seederrors"
 	"golang.org/x/exp/constraints"
+
+	"github.com/xiegeo/seed/seederrors"
 )
 
 // Dictionary of seed.CodeName (use generics to avoid import cycle) to a field or object.
@@ -22,7 +23,7 @@ func NewDictionary[K ~string, V any]() *Dictionary[K, V] {
 func (d *Dictionary[K, V]) set(k K, v V, simple []byte, version int8) error {
 	d.m[k] = v
 	byVersion, _ := d.prefixIndex.getExact(simple)
-	setSliceValue(version, byVersion, k)
+	byVersion = setSliceValue(version, byVersion, k)
 	d.prefixIndex.putFast(simple, byVersion)
 	return nil
 }
@@ -60,7 +61,7 @@ func (d *Dictionary[K, V]) Add(k K, v V) error {
 }
 
 func getSliceValue[I constraints.Integer, V any](i I, s []V) V {
-	if int(i) <= len(s) {
+	if int(i) >= len(s) {
 		var zeroValue V
 		return zeroValue
 	}
@@ -68,7 +69,7 @@ func getSliceValue[I constraints.Integer, V any](i I, s []V) V {
 }
 
 func setSliceValue[I constraints.Integer, V any](i I, s []V, v V) []V {
-	if int(i) <= len(s) {
+	if int(i) >= len(s) {
 		s = append(s, make([]V, int(i)-len(s)+1)...)
 	}
 	s[i] = v

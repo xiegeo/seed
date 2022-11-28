@@ -76,6 +76,9 @@ func (p prefixIndex[V]) getAnyInPrefix(prefix []byte) (V, bool) {
 		var zeroValue V
 		return zeroValue, false
 	}
-	vs := sub.GetAll(nil)
-	return vs[0].(V), true
+	var out trie.ValueType
+	sub.Iterate(func(prefix []byte, value trie.ValueType) {
+		out = value
+	})
+	return out.(V), true
 }
