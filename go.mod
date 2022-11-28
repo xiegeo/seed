@@ -7,10 +7,12 @@ require (
 	github.com/globusdigital/deep-copy v0.5.4
 	github.com/jeandeaual/go-locale v0.0.0-20220711133428-7de61946b173
 	github.com/mattn/go-sqlite3 v1.14.16
+	github.com/porfirion/trie v0.0.1
 	github.com/puzpuzpuz/xsync/v2 v2.4.0
 	github.com/shopspring/decimal v1.3.1
-	github.com/stretchr/testify v1.7.0
+	github.com/stretchr/testify v1.8.1
 	github.com/wk8/go-ordered-map/v2 v2.0.0
+	golang.org/x/exp v0.0.0-20221126150942-6ab00d035af9
 	golang.org/x/text v0.4.0
 )
 
@@ -25,6 +27,6 @@ require (
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/rogpeppe/go-internal v1.8.1 // indirect
-	golang.org/x/sys v0.0.0-20220722155257-8c9f86f7a55f // indirect
-	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
+	golang.org/x/sys v0.1.0 // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

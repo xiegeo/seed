@@ -20,6 +20,7 @@ linters-settings:
     # Default: []
     ignorePackageGlobs:
       - github.com/xiegeo/seed # not external
+      - github.com/xiegeo/seed/* # not external
       - github.com/cockroachdb/errors/* # error tools
       - database/sql # todo
       - context
@@ -47,6 +48,13 @@ linters-settings:
     # Default: []
     ignored-numbers:
       - '2'
+    # List of function patterns to exclude from analysis.
+    # Following functions are always ignored: `time.Date`,
+    # `strconv.FormatInt`, `strconv.FormatUint`, `strconv.FormatFloat`,
+    # `strconv.ParseInt`, `strconv.ParseUint`, `strconv.ParseFloat`.
+    # Default: []
+    ignored-functions:
+      - 'strconv.ParseInt'
 
 linters:
   enable-all: true # use new linters by default when golangci-lint upgrades, lets not miss any good ideas
@@ -85,8 +93,8 @@ linters:
 issues:
   exclude-rules:
   # revisit after dictionary rewrite
-    - text: "fieldalignment: struct with .* pointer bytes could be .*"
-      linters: [govet]
+  #  - text: "fieldalignment: struct with .* pointer bytes could be .*"
+  #    linters: [govet]
 
   # case by case, but not worse
     - text: "( MakeDirectedCondition is 11,)|( timeStampFailback is 11,)"
