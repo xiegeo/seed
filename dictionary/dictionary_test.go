@@ -108,21 +108,32 @@ func FuzzDictionary(f *testing.F) {
 		if !allowed.MatchString(a) {
 			t.Fatal("illegal character was added to dictionary")
 		}
-		if err := dict.Add(b, b); err != nil {
-			// if b can not be added after a, then a can not be added after b
-			dict = New[string, string]()
-			err = dict.Add(b, b)
-			if err != nil {
-				require.NoError(t, dict.Add(a, a))
+		errB := dict.Add(b, b)
+
+		dict2 := New[string, string]()
+		errB2 := dict2.Add(b, b)
+		if errB2 != nil {
+			// If dictionary is empty, then the only error can be b is a illegal name.
+			// If b is a illegal name, then it must be the error reported on Add.
+			require.EqualError(t, errB2, errB.Error())
+		} else {
+			// if b is legal and ...
+			err := dict2.Add(a, a)
+			if errB != nil {
+				// if b can not be added after a, then a can not be added after b
+				require.EqualError(t, err, errB.Error())
 			} else {
-				require.Error(t, dict.Add(a, a))
+				// if b can be added after a, then a can be added after b
+				require.NoError(t, err)
 			}
-			return
 		}
 
 		// if a+c = b, and
-		//    a,b can be in the same dictionary,
+		// if a, b can be in the same dictionary,
 		// then c can not be legal.
+		if errB != nil {
+			return
+		}
 		_, _, err := Simplify(c)
 		require.Error(t, err)
 	})

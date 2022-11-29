@@ -56,11 +56,11 @@ func (d *Dictionary[K, V]) Add(k K, v V) error {
 	// do prefix checks without version postfix
 	longerName, found := d.prefixIndex.getAnyInPrefix(simple)
 	if found {
-		return seederrors.NewNameRepeatedError(k, longerName[0])
+		return seederrors.NewNameRepeatedError(k, getLastValue(longerName))
 	}
 	shorterName, found := d.prefixIndex.getAnyPrefixOf(simple)
 	if found {
-		return seederrors.NewNameRepeatedError(shorterName[0], k)
+		return seederrors.NewNameRepeatedError(getLastValue(shorterName), k)
 	}
 	return d.set(k, v, simple, version)
 }
@@ -79,4 +79,12 @@ func setSliceValue[I constraints.Integer, V any](i I, s []V, v V) []V {
 	}
 	s[i] = v
 	return s
+}
+
+func getLastValue[V any](s []V) V {
+	if len(s) == 0 {
+		var zeroValue V
+		return zeroValue
+	}
+	return s[len(s)-1]
 }
