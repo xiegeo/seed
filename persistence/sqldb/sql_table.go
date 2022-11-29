@@ -136,6 +136,9 @@ func (e Expression) writeTo(w *writeWarpper) {
 		w.write([]byte(e.A))
 	case UnaryExpression:
 		w.printf("%s ", e.A)
+		if len(e.Expressions) != 1 {
+			w.additionalError(seederrors.NewSystemError("UnaryExpression go %d Expressions", len(e.Expressions)))
+		}
 		e.Expressions[0].writeTo(w)
 	case BinaryExpression:
 		w.writeJoin([]byte(" "+e.A+" "), warpSlice(e.Expressions...)...)
