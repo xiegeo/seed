@@ -29,29 +29,6 @@ func (p prefixIndex[V]) putCopyKey(k []byte, v V) {
 	p.putFast(k, v)
 }
 
-func (p prefixIndex[V]) delete(keys ...[]byte) int {
-	filterOut := makePrefixIndex[V]()
-	var zeroValue V
-	for _, k := range keys {
-		filterOut.putFast(k, zeroValue)
-	}
-	return p.deleteIndex(filterOut)
-}
-
-func (p prefixIndex[V]) deleteIndex(filterOut prefixIndex[V]) int {
-	newIndex := makePrefixIndex[V]()
-	var count int
-	p.interal.Iterate(func(key []byte, value trie.ValueType) {
-		if _, found := filterOut.interal.Get(key); found {
-			count++
-			return
-		}
-		newIndex.putCopyKey(key, value.(V))
-	})
-	*p.interal = *newIndex.interal
-	return count
-}
-
 func (p prefixIndex[V]) getExact(key []byte) (V, bool) {
 	value, ok := p.interal.Get(key)
 	if !ok {

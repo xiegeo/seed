@@ -6,18 +6,55 @@ import (
 	"github.com/xiegeo/seed/seederrors"
 )
 
-// Dictionary of seed.CodeName (use generics to avoid import cycle) to a field or object.
-// Dictionary enforces seed name rules on character set, prefix, and versioning.
+// Dictionary of seed.CodeName (use generics to avoid import cycle) to a field or object definition.
+// Dictionary enforce naming rules on character-set, and versioning.
+// Dictionary preserves logical ordering, useful for field names.
+//
+// Dictionary optionally enforces field name rules on prefix.
+//   - When used for fields, AllowPrefixMatch is set to false (default).
+//   - When used for objects, AllowPrefixMatch is set to true.
+//
+// Noticeable none features: delete or modify saved keys. Instead, domains are imported,
+// and could just be reimported when upstream changes.
+// So, dynamically changing a domain do not have a use case yet.
+// While data migration to support domain modification is another beast all together.
 type Dictionary[K ~string, V any] struct {
-	m           map[K]V
-	prefixIndex prefixIndex[[]K]
+	m                map[K]V
+	logicalOrder     []K
+	prefixIndex      prefixIndex[[]K]
+	allowPrefixMatch bool
 }
 
-func New[K ~string, V any]() *Dictionary[K, V] {
+func NewField[K ~string, V any]() *Dictionary[K, V] {
 	return &Dictionary[K, V]{
 		m:           make(map[K]V),
 		prefixIndex: makePrefixIndex[[]K](),
 	}
+}
+
+func NewObject[K ~string, V any]() *Dictionary[K, V] {
+	dict := NewField[K, V]()
+	dict.allowPrefixMatch = true
+	return dict
+}
+
+// RangeLogical range the dictionary in logical (insertion) order, stops on first error encountered.
+func (d *Dictionary[K, V]) RangeLogical(f func(K, V) error) error {
+	for _, k := range d.logicalOrder {
+		v, ok := d.m[k]
+		if !ok {
+			return seederrors.NewSystemError("Dictionary internals is inconsistent: logicalOrder key %s not found in map", k)
+		}
+		err := f(k, v)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (d *Dictionary[K, V]) Count() int {
+	return len(d.m)
 }
 
 func (d *Dictionary[K, V]) Get(k K) (V, bool) {
@@ -26,6 +63,10 @@ func (d *Dictionary[K, V]) Get(k K) (V, bool) {
 }
 
 func (d *Dictionary[K, V]) set(k K, v V, simple []byte, version int8) error {
+	_, exist := d.m[k]
+	if !exist {
+		d.logicalOrder = append(d.logicalOrder, k)
+	}
 	d.m[k] = v
 	byVersion, _ := d.prefixIndex.getExact(simple)
 	byVersion = setSliceValue(version, byVersion, k)
@@ -52,6 +93,9 @@ func (d *Dictionary[K, V]) Add(k K, v V) error {
 			return d.set(k, v, simple, version)
 		}
 		return seederrors.NewNameVersionRepeatedError(k, exactVersion, version)
+	}
+	if d.allowPrefixMatch {
+		return d.set(k, v, simple, version)
 	}
 	// do prefix checks without version postfix
 	longerName, found := d.prefixIndex.getAnyInPrefix(simple)

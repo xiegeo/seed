@@ -1,3 +1,0 @@
-go test fuzz v1
-string("Aİ0")
-uint16(4)
