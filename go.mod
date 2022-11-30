@@ -4,7 +4,6 @@ go 1.19
 
 require (
 	github.com/cockroachdb/errors v1.9.0
-	github.com/globusdigital/deep-copy v0.5.4
 	github.com/jeandeaual/go-locale v0.0.0-20220711133428-7de61946b173
 	github.com/mattn/go-sqlite3 v1.14.16
 	github.com/porfirion/trie v0.0.1

@@ -32,7 +32,7 @@ func TestAddDomain(t *testing.T) {
 	db, err := sqldb.New(rawDB, sqldb.Sqlite)
 	require.NoError(t, err)
 	guestbook := Domain()
-	err = db.AddDomain(ctx, &guestbook)
+	err = db.AddDomain(ctx, guestbook)
 	require.NoError(t, err)
 	err = db.InsertObjects(ctx, map[seed.CodeName]any{
 		Event().Name: []map[seed.CodeName]any{{

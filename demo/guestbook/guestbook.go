@@ -9,31 +9,29 @@ import (
 	"github.com/xiegeo/seed"
 )
 
-func Domain() seed.Domain {
-	return seed.Domain{
-		Thing: seed.Thing{
+func Domain() *seed.Domain {
+	return seed.NewDomain(
+		seed.Thing{
 			Name: "guestbook",
 		},
-		Objects: []seed.Object{
-			Guest(), Event(),
-		},
-	}
+		Guest(), Event(),
+	)
 }
 
-func Guest() seed.Object {
-	return seed.Object{
+func Guest() *seed.Object {
+	return &seed.Object{
 		Thing: seed.Thing{
 			Name: "guest",
 		},
-		FieldProperties: seed.FieldProperties{
-			Fields: []seed.Field{
+		FieldGroup: seed.FieldGroup{
+			Fields: seed.NewFields(
 				TimeField(),
 				NameField(),
 				// EventsField(), // todo: list and ref types
 				NumberOfGuestsField(),
 				// ContactField(), // todo: combination type
 				NoteField(),
-			},
+			),
 			Identities: []seed.Identity{{
 				Fields: []seed.CodeName{TimeField().Name, NameField().Name},
 			}},
@@ -41,20 +39,20 @@ func Guest() seed.Object {
 	}
 }
 
-func Event() seed.Object {
-	return seed.Object{
+func Event() *seed.Object {
+	return &seed.Object{
 		Thing: seed.Thing{
 			Name: "event",
 		},
-		FieldProperties: seed.FieldProperties{
-			Fields: []seed.Field{
+		FieldGroup: seed.FieldGroup{
+			Fields: seed.NewFields(
 				StartTimeField(),
 				EndTimeField(),
 				// EventNameField(), // todo:i18n
 				PublishField(),
 				MaxNumberOfGuestsField(),
 				// EventDescriptionField(), // todo:i18n
-			},
+			),
 			Identities: []seed.Identity{{
 				Fields: []seed.CodeName{EventNameField().Name},
 			}},
@@ -67,8 +65,8 @@ func Event() seed.Object {
 	}
 }
 
-func NameField() seed.Field {
-	return seed.Field{
+func NameField() *seed.Field {
+	return &seed.Field{
 		Thing: seed.Thing{
 			Name: "name",
 			Label: seed.I18n[string]{
@@ -85,7 +83,7 @@ func NameField() seed.Field {
 	}
 }
 
-func EventNameField() seed.Field {
+func EventNameField() *seed.Field {
 	f := NameField()
 	f.Label = seed.I18n[string]{
 		language.English: "Event Name",
@@ -95,8 +93,8 @@ func EventNameField() seed.Field {
 	return f
 }
 
-func NumberOfGuestsField() seed.Field {
-	return seed.Field{
+func NumberOfGuestsField() *seed.Field {
+	return &seed.Field{
 		Thing: seed.Thing{
 			Name: "number_of_guests",
 			Label: seed.I18n[string]{
@@ -112,7 +110,7 @@ func NumberOfGuestsField() seed.Field {
 	}
 }
 
-func MaxNumberOfGuestsField() seed.Field {
+func MaxNumberOfGuestsField() *seed.Field {
 	f := NumberOfGuestsField()
 	f.Name = "max_number_of_guests"
 	f.Label = seed.I18n[string]{
@@ -126,8 +124,8 @@ func MaxNumberOfGuestsField() seed.Field {
 	return f
 }
 
-func TimeField() seed.Field {
-	return seed.Field{
+func TimeField() *seed.Field {
+	return &seed.Field{
 		Thing: seed.Thing{
 			Name: "time",
 			Label: seed.I18n[string]{
@@ -144,7 +142,7 @@ func TimeField() seed.Field {
 	}
 }
 
-func StartTimeField() seed.Field {
+func StartTimeField() *seed.Field {
 	f := TimeField()
 	f.Name = "start_time"
 	f.Label = seed.I18n[string]{
@@ -160,7 +158,7 @@ func StartTimeField() seed.Field {
 	return f
 }
 
-func EndTimeField() seed.Field {
+func EndTimeField() *seed.Field {
 	f := StartTimeField()
 	f.Name = "end_time"
 	f.Label = seed.I18n[string]{
@@ -170,8 +168,8 @@ func EndTimeField() seed.Field {
 	return f
 }
 
-func ContactField() seed.Field {
-	return seed.Field{
+func ContactField() *seed.Field {
+	return &seed.Field{
 		Thing: seed.Thing{
 			Name: "contact",
 			Label: seed.I18n[string]{
@@ -181,16 +179,16 @@ func ContactField() seed.Field {
 		},
 		FieldType: seed.Combination,
 		FieldTypeSetting: seed.CombinationSetting{
-			Fields: []seed.Field{
+			Fields: seed.NewFields(
 				PhoneNumberField(),
 				EmailField(),
-			},
+			),
 		},
 	}
 }
 
-func PhoneNumberField() seed.Field {
-	return seed.Field{
+func PhoneNumberField() *seed.Field {
+	return &seed.Field{
 		Thing: seed.Thing{
 			Name: "phone_number",
 			Label: seed.I18n[string]{
@@ -207,8 +205,8 @@ func PhoneNumberField() seed.Field {
 	}
 }
 
-func EmailField() seed.Field {
-	return seed.Field{
+func EmailField() *seed.Field {
+	return &seed.Field{
 		Thing: seed.Thing{
 			Name: "email",
 			Label: seed.I18n[string]{
@@ -225,8 +223,8 @@ func EmailField() seed.Field {
 	}
 }
 
-func NoteField() seed.Field {
-	return seed.Field{
+func NoteField() *seed.Field {
+	return &seed.Field{
 		Thing: seed.Thing{
 			Name: "note",
 			Label: seed.I18n[string]{
@@ -242,8 +240,8 @@ func NoteField() seed.Field {
 	}
 }
 
-func EventDescriptionField() seed.Field {
-	return seed.Field{
+func EventDescriptionField() *seed.Field {
+	return &seed.Field{
 		Thing: seed.Thing{
 			Name: "description",
 			Label: seed.I18n[string]{
@@ -260,8 +258,8 @@ func EventDescriptionField() seed.Field {
 	}
 }
 
-func EventsField() seed.Field {
-	return seed.Field{
+func EventsField() *seed.Field {
+	return &seed.Field{
 		Thing: seed.Thing{
 			Name: "events",
 			Label: seed.I18n[string]{
@@ -282,8 +280,8 @@ func EventsField() seed.Field {
 	}
 }
 
-func PublishField() seed.Field {
-	return seed.Field{
+func PublishField() *seed.Field {
+	return &seed.Field{
 		Thing: seed.Thing{
 			Name: "publish",
 			Label: seed.I18n[string]{

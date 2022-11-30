@@ -15,16 +15,17 @@ type domainInfo struct {
 }
 
 func (db *DB) domainInfoFromDomain(ctx context.Context, d *seed.Domain) (domainInfo, error) {
-	objectMap := make(map[seed.CodeName]objectInfo, len(d.Objects))
-	var err error
-	for _, ob := range d.Objects {
+	objectMap := make(map[seed.CodeName]objectInfo, d.Objects.Count())
+	err := d.Objects.RangeLogical(func(cn seed.CodeName, ob *seed.Object) (err error) {
+		// the exact ordering does not mater, range deterministically to ease debugging.
 		objectMap[ob.Name], err = db.objectInfoFromObject(ctx, d, ob)
-		if err != nil {
-			return domainInfo{}, err
-		}
+		return err
+	})
+	if err != nil {
+		return domainInfo{}, err
 	}
 	return domainInfo{
-		Thing:     d.Thing.DeepCopy(),
+		Thing:     d.Thing,
 		objectMap: objectMap,
 	}, nil
 }
@@ -36,8 +37,8 @@ type objectInfo struct {
 	helperTables map[string]Table
 }
 
-func (db *DB) objectInfoFromObject(ctx context.Context, d *seed.Domain, ob seed.Object) (objectInfo, error) {
-	tableName, err := db.generateTableName(ctx, d, &ob)
+func (db *DB) objectInfoFromObject(ctx context.Context, d *seed.Domain, ob *seed.Object) (objectInfo, error) {
+	tableName, err := db.generateTableName(ctx, d, ob)
 	if err != nil {
 		return objectInfo{}, err
 	}
@@ -45,33 +46,36 @@ func (db *DB) objectInfoFromObject(ctx context.Context, d *seed.Domain, ob seed.
 	table := InitTable(tableName)
 	table.Option = db.option.TableOption
 	helpers := make(map[string]Table)
-	for i := range ob.Fields {
-		f := &ob.Fields[i]
+	err = ob.Fields.RangeLogical(func(cn seed.CodeName, f *seed.Field) error {
 		info, err := db.generateFieldInfo(f)
 		if err != nil {
-			return objectInfo{}, err
+			return err
 		}
 		_, present := fields.Set(f.Name, *info)
 		if present {
-			return objectInfo{}, seederrors.NewSystemError(`field with name="%s" inserted again, this should never happen`, f.Name)
+			return seederrors.NewSystemError(`field with name="%s" inserted again, this should never happen`, f.Name)
 		}
 		for _, col := range info.cols {
 			_, present = table.Columns.Set(col.Name, col)
 			if present {
-				return objectInfo{}, seederrors.NewSystemError(`column with name="%s" inserted again, this should never happen`, col.Name)
+				return seederrors.NewSystemError(`column with name="%s" inserted again, this should never happen`, col.Name)
 			}
 		}
 		table.Constraint.Checks = append(table.Constraint.Checks, info.checks...)
 		for _, helper := range info.tables {
 			_, present = helpers[helper.Name]
 			if present {
-				return objectInfo{}, seederrors.NewSystemError(`table with name="%s" inserted again, this should never happen`, helper.Name)
+				return seederrors.NewSystemError(`table with name="%s" inserted again, this should never happen`, helper.Name)
 			}
 			helpers[helper.Name] = helper
 		}
+		return nil
+	})
+	if err != nil {
+		return objectInfo{}, nil
 	}
 	return objectInfo{
-		Thing:        ob.Thing.DeepCopy(),
+		Thing:        ob.Thing,
 		fields:       fields,
 		mainTable:    table,
 		helperTables: helpers,

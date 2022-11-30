@@ -8,13 +8,20 @@ import (
 
 // Dictionary of seed.CodeName (use generics to avoid import cycle) to a field or object definition.
 // Dictionary enforce naming rules on character-set, and versioning.
-// Dictionary preserves logical ordering, useful for field names.
+// Dictionary preserves assertion/logical ordering, useful for field names.
 //
 // Dictionary optionally enforces field name rules on prefix.
-//   - When used for fields, AllowPrefixMatch is set to false (default).
-//   - When used for objects, AllowPrefixMatch is set to true.
+//   - When used for fields, AllowPrefixMatch is set to false (use NewField).
+//   - When used for objects, AllowPrefixMatch is set to true (use NewObject).
 //
-// Noticeable none features: delete or modify saved keys. Instead, domains are imported,
+// Duplication is checked on simplified versions of code names by removing case and "_".
+// "AB", "aB", "A_b" all simplify to "ab". A field can not have a name that is the prefix
+// of another under the same parent (except "v2", "v3"... postfixes). All fields of the
+// same name must have the same properties (except label and description).
+//
+// For details on simplification, see func Simplify.
+//
+// Noticeable none features: delete or replace k-v pairs. Instead, domains are expected to be imported,
 // and could just be reimported when upstream changes.
 // So, dynamically changing a domain do not have a use case yet.
 // While data migration to support domain modification is another beast all together.
@@ -25,6 +32,7 @@ type Dictionary[K ~string, V any] struct {
 	allowPrefixMatch bool
 }
 
+// NewField creates a dictionary for a list of fields in an object
 func NewField[K ~string, V any]() *Dictionary[K, V] {
 	return &Dictionary[K, V]{
 		m:           make(map[K]V),
@@ -32,6 +40,7 @@ func NewField[K ~string, V any]() *Dictionary[K, V] {
 	}
 }
 
+// NewObject creates a dictionary for a list of objects in a domain
 func NewObject[K ~string, V any]() *Dictionary[K, V] {
 	dict := NewField[K, V]()
 	dict.allowPrefixMatch = true

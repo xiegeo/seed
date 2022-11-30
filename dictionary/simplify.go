@@ -10,8 +10,10 @@ import (
 )
 
 var (
-	checkUnderline     = regexp.MustCompile("(^_)|(__)|(_$)")
-	checkCharacter     = regexp.MustCompile("^[a-zA-Z][_a-zA-Z0-9]*$")
+	// checks on original input
+	checkUnderline = regexp.MustCompile("(^_)|(__)|(_$)")
+	checkCharacter = regexp.MustCompile("^[a-zA-Z][_a-zA-Z0-9]*$")
+	// checks after lower casing and removing "_"
 	checkEndVersion    = regexp.MustCompile("v[0-9]+$")
 	checkNotEndVersion = regexp.MustCompile("(^v[0-9])|(v[0-9][a-z])")
 )
@@ -22,6 +24,15 @@ var (
 //   - []byte returned is the simplified name for prefix checking, with version postfix removed.
 //   - int8 is the version, if the name ends in a version indicator, otherwise -1 is returned.
 //     The max supported version number is 99.
+//
+// The naming rules are:
+//
+//   - The only allowed characters are "A" to "Z", "a" to "z", "0" to "9", and "_".
+//   - "_" and "0" to "9" can not be the first character.
+//   - "_" can not be the last character.
+//   - "__" is not allowed.
+//   - "v" or "V" followed by a digit or "_" + digit any where marks a version number
+//     -
 func Simplify[T ~string](name T) ([]byte, int8, error) {
 	ns := string(name)
 	if errorsFound := checkUnderline.FindAllStringIndex(ns, -1); len(errorsFound) != 0 {
