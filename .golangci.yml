@@ -7,6 +7,12 @@ linters-settings:
     # Enable all analyzers.
     # Default: false
     enable-all: true
+    # Disable analyzers by name.
+    # Run `go tool vet help` to see all analyzers.
+    # Default: []
+    disable:
+      - fieldalignment
+
   varnamelen:
     # The longest distance, in source lines, that is being considered a "small scope".
     # Variables used in at most this many lines will be ignored.
@@ -127,11 +133,16 @@ issues:
         - maintidx
         - unused
         - funlen
+        - cyclop
+        - gocognit
+        - varnamelen
+        - errcheck
+        - errorlint
         
     - path: "(.+)_test.go"
       linters:
         - govet
-      text: "declaration of \"t\" shadows declaration"
+      text: "(declaration of \"t\" shadows declaration)|(fieldalignment:)"
 
     - path: "demo"
       linters:

@@ -18,15 +18,18 @@ type FieldGroup struct {
 }
 
 // NewFields build a self keyed dictionary for use in FieldGroup.Fields
-func NewFields(fs ...*Field) *dictionary.SelfKeyed[CodeName, *Field] {
+func NewFields(fs ...*Field) (*dictionary.SelfKeyed[CodeName, *Field], error) {
 	dict := dictionary.NewSelfKeyed(
 		dictionary.NewField[CodeName, *Field](),
 		func(f *Field) CodeName {
 			return f.Name
 		},
 	)
-	dict.AddValue(fs...)
-	return dict
+	err := dict.AddValue(fs...)
+	if err != nil {
+		return nil, err
+	}
+	return dict, nil
 }
 
 // Identity is used to mark a subset of fields in an object or a combination field as capable of

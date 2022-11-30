@@ -32,6 +32,10 @@ func (db *DB) AddDomain(ctx context.Context, d *seed.Domain) error {
 }
 
 func (db *DB) generateTableName(ctx context.Context, d *seed.Domain, ob *seed.Object) (string, error) {
+	err := ctx.Err() // hide unparam lint for future usage
+	if err != nil {
+		return "", err
+	}
 	return fmt.Sprintf("%s_ob_%s", d.Name, ob.Name), nil
 }
 

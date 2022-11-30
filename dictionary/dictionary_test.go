@@ -40,7 +40,7 @@ func TestDictonary(t *testing.T) {
 		},
 	}
 	for _, tC := range testCases {
-		// t.Run(tC.name, func(t *testing.T) {
+		// t.Run(tC.name, func(t *testing.T) { // only one case for now
 		t.Run("one to one match", func(t *testing.T) {
 			for i := 0; i < len(tC.notFit); i++ {
 				a := tC.fits[i]
@@ -103,7 +103,7 @@ func TestDictonary(t *testing.T) {
 				assert.Error(t, allFits.Add(k, i), k)
 			}
 		})
-		//})
+		// })
 	}
 }
 
@@ -125,8 +125,8 @@ func FuzzDictionary(f *testing.F) {
 			return // discourage long or uninteresting cases
 		}
 		// make such a+c = b
-		a := string(b[:aLenth])
-		c := string(b[aLenth:])
+		a := b[:aLenth]
+		c := b[aLenth:]
 		dict := NewField[string, string]()
 		dict.allowPrefixMatch = allowPrefix
 		dict2 := NewField[string, string]()

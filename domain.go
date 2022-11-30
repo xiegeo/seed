@@ -23,16 +23,19 @@ type Domain struct {
 	Objects *dictionary.SelfKeyed[CodeName, *Object]
 }
 
-func NewDomain(thing Thing, objs ...*Object) *Domain {
+func NewDomain(thing Thing, objs ...*Object) (*Domain, error) {
 	dict := dictionary.NewSelfKeyed(
 		dictionary.NewObject[CodeName, *Object](),
 		func(ob *Object) CodeName {
 			return ob.Name
 		},
 	)
-	dict.AddValue(objs...)
+	err := dict.AddValue(objs...)
+	if err != nil {
+		return nil, err
+	}
 	return &Domain{
 		Thing:   thing,
 		Objects: dict,
-	}
+	}, nil
 }

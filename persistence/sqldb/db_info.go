@@ -47,7 +47,7 @@ func (db *DB) objectInfoFromObject(ctx context.Context, d *seed.Domain, ob *seed
 	table.Option = db.option.TableOption
 	helpers := make(map[string]Table)
 	err = ob.Fields.RangeLogical(func(cn seed.CodeName, f *seed.Field) error {
-		info, err := db.generateFieldInfo(f)
+		info, err := db.generateFieldInfo(f) //nolint:govet // shadow: declaration of "err"
 		if err != nil {
 			return err
 		}
@@ -72,7 +72,7 @@ func (db *DB) objectInfoFromObject(ctx context.Context, d *seed.Domain, ob *seed
 		return nil
 	})
 	if err != nil {
-		return objectInfo{}, nil
+		return objectInfo{}, err
 	}
 	return objectInfo{
 		Thing:        ob.Thing,

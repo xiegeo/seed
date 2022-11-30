@@ -9,13 +9,20 @@ import (
 	"github.com/xiegeo/seed"
 )
 
+func must[T any](out T, err error) T {
+	if err != nil {
+		panic(err)
+	}
+	return out
+}
+
 func Domain() *seed.Domain {
-	return seed.NewDomain(
+	return must(seed.NewDomain(
 		seed.Thing{
 			Name: "guestbook",
 		},
 		Guest(), Event(),
-	)
+	))
 }
 
 func Guest() *seed.Object {
@@ -24,14 +31,14 @@ func Guest() *seed.Object {
 			Name: "guest",
 		},
 		FieldGroup: seed.FieldGroup{
-			Fields: seed.NewFields(
+			Fields: must(seed.NewFields(
 				TimeField(),
 				NameField(),
 				// EventsField(), // todo: list and ref types
 				NumberOfGuestsField(),
 				// ContactField(), // todo: combination type
 				NoteField(),
-			),
+			)),
 			Identities: []seed.Identity{{
 				Fields: []seed.CodeName{TimeField().Name, NameField().Name},
 			}},
@@ -45,14 +52,14 @@ func Event() *seed.Object {
 			Name: "event",
 		},
 		FieldGroup: seed.FieldGroup{
-			Fields: seed.NewFields(
+			Fields: must(seed.NewFields(
 				StartTimeField(),
 				EndTimeField(),
 				// EventNameField(), // todo:i18n
 				PublishField(),
 				MaxNumberOfGuestsField(),
 				// EventDescriptionField(), // todo:i18n
-			),
+			)),
 			Identities: []seed.Identity{{
 				Fields: []seed.CodeName{EventNameField().Name},
 			}},
@@ -179,10 +186,10 @@ func ContactField() *seed.Field {
 		},
 		FieldType: seed.Combination,
 		FieldTypeSetting: seed.CombinationSetting{
-			Fields: seed.NewFields(
+			Fields: must(seed.NewFields(
 				PhoneNumberField(),
 				EmailField(),
-			),
+			)),
 		},
 	}
 }
