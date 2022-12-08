@@ -128,6 +128,13 @@ const (
 	ListExpression
 )
 
+func ValueLiteral(v string) Expression {
+	return Expression{
+		Type: ValueExpression,
+		A:    v,
+	}
+}
+
 func (e Expression) writeTo(w *writeWarpper) {
 	switch e.Type {
 	default:

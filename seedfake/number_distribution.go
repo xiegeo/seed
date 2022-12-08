@@ -6,6 +6,7 @@ import (
 	"io"
 	"math"
 	"math/big"
+	"math/rand"
 	mrand "math/rand"
 
 	"golang.org/x/exp/constraints"
@@ -192,6 +193,12 @@ func NewMixedDistribution(pickBy *mrand.Rand, dists []NumberDistribution, weight
 		dists:      dists,
 		pickLevels: pickLevels,
 	}
+}
+
+func NewMinMaxFlat(s rand.Source, min, max, flat float64) *Mixed {
+	return NewMixedDistribution(rand.New(s),
+		[]NumberDistribution{Min{}, Max{}, NewFlat(s)},
+		[]float64{min, max, flat})
 }
 
 func (m *Mixed) pickDistribution() NumberDistribution {

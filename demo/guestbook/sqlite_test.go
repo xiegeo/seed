@@ -3,13 +3,16 @@ package main
 import (
 	"context"
 	"database/sql"
+	"math/rand"
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/xiegeo/seed"
 	"github.com/xiegeo/seed/persistence/sqldb"
+	"github.com/xiegeo/seed/seedfake"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -37,10 +40,21 @@ func TestAddDomain(t *testing.T) {
 	err = db.InsertObjects(ctx, map[seed.CodeName]any{
 		Event().Name: []map[seed.CodeName]any{{
 			StartTimeField().Name:         timeWithMinute(t, "2006-01-02T15:00"),
-			EndTimeField().Name:           timeWithMinute(t, "2006-01-02T15:00"),
+			EndTimeField().Name:           timeWithMinute(t, "2006-01-02T16:00"),
 			PublishField().Name:           true,
 			MaxNumberOfGuestsField().Name: 100,
 		}},
 	})
 	require.NoError(t, err)
+	gen := seedfake.NewValueGen(seedfake.NewMinMaxFlat(rand.NewSource(0), 1, 1, 3))
+	added := 0
+	for i := 100; i > 0; i-- {
+		err = db.InsertObjects(ctx, map[seed.CodeName]any{
+			Event().Name: must(gen.ValuesForObject(Event(), 1)),
+		})
+		if err == nil {
+			added++
+		}
+	}
+	assert.Equal(t, 46, added)
 }

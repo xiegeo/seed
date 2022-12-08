@@ -11,11 +11,11 @@ import (
 
 type domainInfo struct {
 	seed.Thing
-	objectMap map[seed.CodeName]objectInfo
+	objectMap map[seed.CodeName]*objectInfo
 }
 
 func (db *DB) domainInfoFromDomain(ctx context.Context, d *seed.Domain) (domainInfo, error) {
-	objectMap := make(map[seed.CodeName]objectInfo, d.Objects.Count())
+	objectMap := make(map[seed.CodeName]*objectInfo, d.Objects.Count())
 	err := d.Objects.RangeLogical(func(cn seed.CodeName, ob *seed.Object) (err error) {
 		// the exact ordering does not mater, range deterministically to ease debugging.
 		objectMap[ob.Name], err = db.objectInfoFromObject(ctx, d, ob)
@@ -32,17 +32,17 @@ func (db *DB) domainInfoFromDomain(ctx context.Context, d *seed.Domain) (domainI
 
 type objectInfo struct {
 	seed.Thing
-	fields       *orderedmap.OrderedMap[seed.CodeName, fieldInfo]
+	fields       *orderedmap.OrderedMap[seed.CodeName, *fieldInfo]
 	mainTable    Table
 	helperTables map[string]Table
 }
 
-func (db *DB) objectInfoFromObject(ctx context.Context, d *seed.Domain, ob *seed.Object) (objectInfo, error) {
+func (db *DB) objectInfoFromObject(ctx context.Context, d *seed.Domain, ob *seed.Object) (*objectInfo, error) {
 	tableName, err := db.generateTableName(ctx, d, ob)
 	if err != nil {
-		return objectInfo{}, err
+		return nil, err
 	}
-	fields := orderedmap.New[seed.CodeName, fieldInfo]()
+	fields := orderedmap.New[seed.CodeName, *fieldInfo]()
 	table := InitTable(tableName)
 	table.Option = db.option.TableOption
 	helpers := make(map[string]Table)
@@ -51,7 +51,7 @@ func (db *DB) objectInfoFromObject(ctx context.Context, d *seed.Domain, ob *seed
 		if err != nil {
 			return err
 		}
-		_, present := fields.Set(f.Name, *info)
+		_, present := fields.Set(f.Name, info)
 		if present {
 			return seederrors.NewSystemError(`field with name="%s" inserted again, this should never happen`, f.Name)
 		}
@@ -72,9 +72,23 @@ func (db *DB) objectInfoFromObject(ctx context.Context, d *seed.Domain, ob *seed
 		return nil
 	})
 	if err != nil {
-		return objectInfo{}, err
+		return nil, err
 	}
-	return objectInfo{
+	ob.RangeRanges(func(r seed.Range) error {
+		a := "<"
+		if r.IncludeEndValue {
+			a = "<="
+		}
+		table.Constraint.Checks = append(table.Constraint.Checks,
+			Expression{
+				Type:        BinaryExpression,
+				A:           a,
+				Expressions: []Expression{ValueLiteral(string(r.Start)), ValueLiteral(string(r.End))},
+			},
+		)
+		return nil
+	})
+	return &objectInfo{
 		Thing:        ob.Thing,
 		fields:       fields,
 		mainTable:    table,

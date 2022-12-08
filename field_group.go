@@ -32,6 +32,24 @@ func NewFields(fs ...*Field) (*dictionary.SelfKeyed[CodeName, *Field], error) {
 	return dict, nil
 }
 
+func (g *FieldGroup) RangeRanges(f func(r Range) error) error {
+	for _, id := range g.Identities {
+		for _, r := range id.Ranges {
+			err := f(r)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	for _, r := range g.Ranges {
+		err := f(r)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // Identity is used to mark a subset of fields in an object or a combination field as capable of
 // identifying an single instance (a license plate number can ID a car), or
 // uniqueness is required for correct modeling of state (two philosophers can not use the same

@@ -49,7 +49,7 @@ func createDomainTx(txc txContext, domain domainInfo) error {
 	return nil
 }
 
-func createObjectTx(txc txContext, obj objectInfo) error {
+func createObjectTx(txc txContext, obj *objectInfo) error {
 	err := createTableTx(txc, obj.mainTable)
 	if err != nil {
 		return seederrors.WithMessagef(err, "in main table %s", obj.mainTable.Name)

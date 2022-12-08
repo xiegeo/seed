@@ -102,7 +102,7 @@ func (b *batchTables) appendData(objectName seed.CodeName, data any) error {
 	if data == nil {
 		return nil
 	}
-	return b.appendValue(&obInfo, reflect.ValueOf(data))
+	return b.appendValue(obInfo, reflect.ValueOf(data))
 }
 
 func (b *batchTables) appendValue(obInfo *objectInfo, dataValue reflect.Value) error {
