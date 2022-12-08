@@ -169,6 +169,13 @@ type IntegerSetting struct {
 	Unit *Unit
 }
 
+func Int64Setting() IntegerSetting {
+	return IntegerSetting{
+		Min: big.NewInt(math.MinInt64),
+		Max: big.NewInt(math.MaxInt64),
+	}
+}
+
 // Covers returns true if s can support all values in s2
 func (s IntegerSetting) Covers(s2 IntegerSetting) bool {
 	switch {
@@ -291,6 +298,15 @@ const (
 	// Decimal64
 )
 
+var _realStandardStringer = []string{"CustomReal", "Float32", "Float64"}
+
+func (s RealStandard) String() string {
+	if s < 0 || s > Float64 {
+		return fmt.Sprintf("RealStandard(%d) out of range[%d,%d]", s, CustomReal, Float64)
+	}
+	return _realStandardStringer[s]
+}
+
 // Covers returns true if s can support all values in s2.
 func (s RealStandard) Covers(s2 RealStandard) bool {
 	switch {
@@ -316,10 +332,11 @@ func (s ReferenceSetting) Covers(s2 ReferenceSetting) bool {
 }
 
 // ListSetting describes a collection of the same type:
-// IsOrdered | IsUnique | collection type
-// false | false | counted set
-// false | true | set
-// true | any | list
+//
+//	| IsOrdered | IsUnique | collection type |
+//	| false     | false    | counted set |
+//	| false     | true     | set |
+//	| true      | any      | list |
 type ListSetting struct {
 	MinLength int64
 	MaxLength int64
@@ -348,4 +365,4 @@ func (s ListSetting) Covers(s2 ListSetting) bool {
 	return true
 }
 
-type CombinationSetting FieldGroup // Reuse FieldGroup
+type CombinationSetting = FieldGroup // Reuse FieldGroup

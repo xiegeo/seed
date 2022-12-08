@@ -28,7 +28,7 @@ import (
 type Dictionary[K ~string, V any] struct {
 	m                map[K]V
 	logicalOrder     []K
-	prefixIndex      prefixIndex[[]K]
+	prefixIndex      prefixIndex[[]K] // simplified name -> version number -> full name
 	allowPrefixMatch bool
 }
 
@@ -44,6 +44,13 @@ func NewField[K ~string, V any]() *Dictionary[K, V] {
 func NewObject[K ~string, V any]() *Dictionary[K, V] {
 	dict := NewField[K, V]()
 	dict.allowPrefixMatch = true
+	return dict
+}
+
+// New creates a new empty dictionary with the same type and configuration.
+func (d *Dictionary[K, V]) New() *Dictionary[K, V] {
+	dict := NewField[K, V]()
+	dict.allowPrefixMatch = d.allowPrefixMatch
 	return dict
 }
 

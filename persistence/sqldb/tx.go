@@ -32,7 +32,7 @@ func (db *DB) doTransaction(ctx context.Context, f func(txc txContext) error) (e
 	var success bool
 	tx, err := db.sqldb.BeginTx(ctx, nil)
 	if err != nil {
-		return seederrors.WithMessagef(err, "BeginTx in createTable")
+		return seederrors.WithMessagef(err, "BeginTx in doTransaction")
 	}
 	defer func() {
 		if !success {

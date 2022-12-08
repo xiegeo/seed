@@ -1,9 +1,6 @@
 package sqldb
 
 import (
-	"math"
-	"math/big"
-
 	"github.com/xiegeo/seed"
 )
 
@@ -36,11 +33,8 @@ func SqliteColumnFeatures() (features ColumnFeatures) {
 		},
 	})
 	features.MustAppend("INTEGER", false, &seed.Field{
-		FieldType: seed.Integer,
-		FieldTypeSetting: seed.IntegerSetting{
-			Min: big.NewInt(math.MinInt64),
-			Max: big.NewInt(math.MaxInt64),
-		},
+		FieldType:        seed.Integer,
+		FieldTypeSetting: seed.Int64Setting(),
 	})
 	features.MustAppend("REAL", false, &seed.Field{
 		FieldType: seed.Real,
