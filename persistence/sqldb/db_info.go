@@ -5,6 +5,7 @@ import (
 
 	orderedmap "github.com/wk8/go-ordered-map/v2"
 
+	"github.com/xiegeo/must"
 	"github.com/xiegeo/seed"
 	"github.com/xiegeo/seed/seederrors"
 )
@@ -74,26 +75,35 @@ func (db *DB) objectInfoFromObject(ctx context.Context, d *seed.Domain, ob *seed
 	if err != nil {
 		return nil, err
 	}
-	ob.RangeRanges(func(r seed.Range) error {
-		a := "<"
-		if r.IncludeEndValue {
-			a = "<="
-		}
-		table.Constraint.Checks = append(table.Constraint.Checks,
-			Expression{
-				Type:        BinaryExpression,
-				A:           a,
-				Expressions: []Expression{ValueLiteral(string(r.Start)), ValueLiteral(string(r.End))},
-			},
-		)
-		return nil
-	})
+	table.Constraint.Checks = append(table.Constraint.Checks, getRangeChecks(ob)...)
 	return &objectInfo{
 		Thing:        ob.Thing,
 		fields:       fields,
 		mainTable:    table,
 		helperTables: helpers,
 	}, nil
+}
+
+func getRangeChecks(ob *seed.Object) []Expression {
+	var exps []Expression
+	must.NoError(ob.RangeRanges(func(r seed.Range) error {
+		a := "<"
+		if r.IncludeEndValue {
+			a = "<="
+		}
+		exps = append(exps,
+			Expression{
+				Type: BinaryExpression,
+				A:    a,
+				Expressions: []Expression{
+					ValueLiteral(string(r.Start)),
+					ValueLiteral(string(r.End)),
+				},
+			},
+		)
+		return nil
+	}))
+	return exps
 }
 
 type fieldInfo struct {

@@ -4,20 +4,14 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/xiegeo/must"
 	"golang.org/x/text/language"
 
 	"github.com/xiegeo/seed"
 )
 
-func must[T any](out T, err error) T {
-	if err != nil {
-		panic(err)
-	}
-	return out
-}
-
 func Domain() *seed.Domain {
-	return must(seed.NewDomain(
+	return must.V(seed.NewDomain(
 		seed.Thing{
 			Name: "guestbook",
 		},
@@ -31,7 +25,7 @@ func Guest() *seed.Object {
 			Name: "guest",
 		},
 		FieldGroup: seed.FieldGroup{
-			Fields: must(seed.NewFields(
+			Fields: must.V(seed.NewFields(
 				TimeField(),
 				NameField(),
 				// EventsField(), // todo: list and ref types
@@ -52,7 +46,7 @@ func Event() *seed.Object {
 			Name: "event",
 		},
 		FieldGroup: seed.FieldGroup{
-			Fields: must(seed.NewFields(
+			Fields: must.V(seed.NewFields(
 				StartTimeField(),
 				EndTimeField(),
 				// EventNameField(), // todo:i18n
@@ -186,7 +180,7 @@ func ContactField() *seed.Field {
 		},
 		FieldType: seed.Combination,
 		FieldTypeSetting: seed.CombinationSetting{
-			Fields: must(seed.NewFields(
+			Fields: must.V(seed.NewFields(
 				PhoneNumberField(),
 				EmailField(),
 			)),

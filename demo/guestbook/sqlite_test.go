@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/xiegeo/must"
 	"github.com/xiegeo/seed"
 	"github.com/xiegeo/seed/persistence/sqldb"
 	"github.com/xiegeo/seed/seedfake"
@@ -50,7 +51,7 @@ func TestAddDomain(t *testing.T) {
 	added := 0
 	for i := 100; i > 0; i-- {
 		err = db.InsertObjects(ctx, map[seed.CodeName]any{
-			Event().Name: must(gen.ValuesForObject(Event(), 1)),
+			Event().Name: must.V(gen.ValuesForObject(Event(), 1)),
 		})
 		if err == nil {
 			added++

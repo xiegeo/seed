@@ -1,8 +1,6 @@
 package seedfake
 
 import (
-	"fmt"
-
 	"github.com/xiegeo/seed"
 	"github.com/xiegeo/seed/seederrors"
 )
@@ -40,15 +38,15 @@ func (g *ValueGen) ValueForSetting(s seed.FieldTypeSetting) (any, error) {
 		if vt.Standard == seed.Float64 {
 			return g.RangeFloat64(*vt.MinFloat, *vt.MaxFloat), nil
 		}
-		return nil, seederrors.NewSystemError(fmt.Sprintf("ValueForSetting RealSetting.Standard %s not yet supported", vt.Standard))
+		return nil, seederrors.NewSystemError("ValueForSetting RealSetting.Standard %s not yet supported", vt.Standard)
 	case seed.ReferenceSetting:
-		return nil, seederrors.NewSystemError(fmt.Sprintf("ValueForSetting FieldTypeSetting ReferenceSetting not yet supported"))
+		return nil, seederrors.NewSystemError("ValueForSetting FieldTypeSetting ReferenceSetting not yet supported")
 	case seed.ListSetting:
 		return g.ValuesForSetting(vt.ItemTypeSetting, g.RangeInt64(vt.MinLength, vt.MaxLength))
 	case seed.CombinationSetting:
 		return g.MapForFieldGroup(vt)
 	}
-	return nil, seederrors.NewSystemError(fmt.Sprintf("ValueForSetting FieldTypeSetting type=%T not handled", s))
+	return nil, seederrors.NewSystemError("ValueForSetting FieldTypeSetting type=%T not handled", s)
 }
 
 func (g *ValueGen) MapForFieldGroup(fg seed.FieldGroup) (map[seed.CodeName]any, error) {

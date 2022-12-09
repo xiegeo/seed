@@ -34,8 +34,7 @@ func (d *SelfKeyed[K, V]) NewMap(f func(V) (V, error)) (*SelfKeyed[K, V], error)
 		if err != nil {
 			return err
 		}
-		dict.AddValue(newValue)
-		return nil
+		return dict.AddValue(newValue)
 	})
 	if err != nil {
 		return nil, err

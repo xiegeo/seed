@@ -8,15 +8,9 @@ import (
 
 	"golang.org/x/text/language"
 
+	"github.com/xiegeo/must"
 	"github.com/xiegeo/seed"
 )
-
-func must[T any](out T, err error) T {
-	if err != nil {
-		panic(err)
-	}
-	return out
-}
 
 func TextLineField() *seed.Field {
 	return &seed.Field{
@@ -175,7 +169,7 @@ func DateTimeNano() *seed.Field {
 }
 
 func WithTimeZone(f *seed.Field) *seed.Field {
-	setting := must(seed.GetFieldTypeSetting[seed.TimeStampSetting](f))
+	setting := must.V(seed.GetFieldTypeSetting[seed.TimeStampSetting](f))
 	setting.WithTimeZoneOffset = true
 	return &seed.Field{
 		Thing: seed.Thing{
@@ -240,7 +234,7 @@ func JSInteger() *seed.Field {
 }
 
 func BigMax(f *seed.Field, exp int64) *seed.Field {
-	setting := must(seed.GetFieldTypeSetting[seed.IntegerSetting](f))
+	setting := must.V(seed.GetFieldTypeSetting[seed.IntegerSetting](f))
 	max := big.NewInt(0).Exp(big.NewInt(math.MaxInt64), big.NewInt(exp), nil)
 	setting.Max = max
 	return &seed.Field{

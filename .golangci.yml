@@ -99,12 +99,8 @@ linters:
 
 issues:
   exclude-rules:
-  # revisit after dictionary rewrite
-  #  - text: "fieldalignment: struct with .* pointer bytes could be .*"
-  #    linters: [govet]
-
   # case by case, but not worse
-    - text: "( MakeDirectedCondition is 11,)|( timeStampFailback is 11,)"
+    - text: "( MakeDirectedCondition is 11,)|( timeStampFailback is 11,)|( ValueForSetting is 12,)"
       linters:
         - cyclop
 
@@ -123,9 +119,16 @@ issues:
       linters:
         - exhaustive
     
-    - text: "fieldalignment: struct with .* pointer bytes could be .*"
+  # seedfake rules
+    - text: Use of weak random number generator # weak random allowed for data faker
+      path: seedfake
       linters:
-        - 
+        - gosec
+
+    - path: seedfake
+      linters: # ignore error allowed for data faker
+        - errcheck
+        - wrapcheck
 
   # tests and demo rules
     - path: "(.+)_test.go"

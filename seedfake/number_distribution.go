@@ -7,8 +7,8 @@ import (
 	"math"
 	"math/big"
 	"math/rand"
-	mrand "math/rand"
 
+	"github.com/xiegeo/must"
 	"golang.org/x/exp/constraints"
 )
 
@@ -113,10 +113,10 @@ func (Max) RangeFloat64(min, max float64) float64 {
 	return max
 }
 
-type Flat struct{ r mrand.Rand }
+type Flat struct{ r rand.Rand }
 
-func NewFlat(source mrand.Source) *Flat {
-	r := mrand.New(source)
+func NewFlat(source rand.Source) *Flat {
+	r := rand.New(source)
 	return &Flat{*r}
 }
 
@@ -144,7 +144,7 @@ func (f *Flat) RangeBigInt(min, max *big.Int) *big.Int {
 	temp := big.NewInt(1)
 	temp.Add(temp, max) // One greater than max to include max value in output.
 	temp.Sub(temp, min)
-	rint := must(crand.Int(&f.r, temp)) // random source f.r should never return error
+	rint := must.V(crand.Int(&f.r, temp)) // random source f.r should never return error
 	return temp.Add(rint, min)
 }
 
@@ -160,7 +160,7 @@ func (f *Flat) RangeFloat64(min, max float64) float64 {
 	}
 	diff := max - min
 	if diff > math.MaxFloat64 {
-		mustBeTrue(min < 0 && max > 0, "if diff is greater than max float, range must have crossed zero")
+		must.True(min < 0 && max > 0, "if diff is greater than max float, range must have crossed zero")
 		switch choseWeighted(&f.r, -min, max) {
 		case 0:
 			return -f.RangeFloat64(0, -min)
@@ -172,12 +172,12 @@ func (f *Flat) RangeFloat64(min, max float64) float64 {
 }
 
 type Mixed struct {
-	pickBy     *mrand.Rand
+	pickBy     *rand.Rand
 	dists      []NumberDistribution
 	pickLevels []float64
 }
 
-func NewMixedDistribution(pickBy *mrand.Rand, dists []NumberDistribution, weights []float64) *Mixed {
+func NewMixedDistribution(pickBy *rand.Rand, dists []NumberDistribution, weights []float64) *Mixed {
 	if len(dists) != len(weights) {
 		panic("NewMixedDistribution: length not same")
 	}
@@ -231,29 +231,10 @@ func (m *Mixed) RangeFloat64(min, max float64) float64 {
 	return m.pickDistribution().RangeFloat64(min, max)
 }
 
-func mustBeTrue(v bool, msg any) {
-	if !v {
-		panic(msg)
-	}
-}
-
-func mustBeFalse(v bool, msg any) {
-	if v {
-		panic(msg)
-	}
-}
-
 func mustNotNeg[V constraints.Signed | constraints.Float](v V) {
 	if v < 0 {
-		panic(fmt.Errorf("negative value %v of %T", v, v))
+		panic(fmt.Sprintf("negative value %v of %T", v, v))
 	}
-}
-
-func must[T any](out T, err error) T {
-	if err != nil {
-		panic(err)
-	}
-	return out
 }
 
 // sumNoOverflow returns the sum of ss. If sum of ss overflows to infinity, ss is scaled down
@@ -264,7 +245,7 @@ func sumNoOverflow(ss ...float64) (float64, []float64) {
 		mustNotNeg(s)
 		if s > largest {
 			largest = s
-			mustBeFalse(math.IsInf(s, 0), "infinity will always overflow")
+			must.False(math.IsInf(s, 0), "infinity will always overflow")
 		}
 	}
 	if math.MaxFloat64/float64(len(ss)) <= largest {
@@ -279,7 +260,7 @@ func sumNoOverflow(ss ...float64) (float64, []float64) {
 	return sum, ss
 }
 
-func choseWeighted(r *mrand.Rand, weights ...float64) int {
+func choseWeighted(r *rand.Rand, weights ...float64) int {
 	sum, weights := sumNoOverflow(weights...)
 	pick := r.Float64() * sum
 	var current float64

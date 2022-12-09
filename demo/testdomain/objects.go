@@ -1,6 +1,7 @@
 package testdomain
 
 import (
+	"github.com/xiegeo/must"
 	"github.com/xiegeo/seed"
 )
 
@@ -11,7 +12,7 @@ func ObjLevel0() *seed.Object {
 			Name: "level_0",
 		},
 		FieldGroup: seed.FieldGroup{
-			Fields: must(seed.NewFields(
+			Fields: must.V(seed.NewFields(
 				TextLineField(),
 				Bytes(),
 				Bool(),
@@ -37,7 +38,7 @@ func ObjLevel0List() *seed.Object {
 			Name: "level_0_list",
 		},
 		FieldGroup: seed.FieldGroup{
-			Fields: must(ObjLevel0().Fields.NewMap(func(f *seed.Field) (*seed.Field, error) {
+			Fields: must.V(ObjLevel0().Fields.NewMap(func(f *seed.Field) (*seed.Field, error) {
 				return ListOf(f, setting), nil
 			})),
 		},
@@ -51,7 +52,7 @@ func ObjTimeStampCommon() *seed.Object {
 			Name: "time_stamp_common",
 		},
 		FieldGroup: seed.FieldGroup{
-			Fields: must(seed.NewFields(
+			Fields: must.V(seed.NewFields(
 				Date(),
 				DateTimeSec(),
 				DateTimeMill(),

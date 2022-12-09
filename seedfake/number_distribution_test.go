@@ -27,6 +27,7 @@ func TestFlat(t *testing.T) {
 }
 
 func testBool(t *testing.T, d Int32Distribution, repeats, expects int) {
+	t.Helper()
 	t.Run("Bool", func(t *testing.T) {
 		var got int
 		for i := repeats; i > 0; i-- {
@@ -39,6 +40,7 @@ func testBool(t *testing.T, d Int32Distribution, repeats, expects int) {
 }
 
 func testInt64(t *testing.T, d Int64Distribution, min, max, repeats int64, expSum *big.Int, expAbsSum *big.Int) {
+	t.Helper()
 	t.Run(fmt.Sprint("Int64 ", min, max), func(t *testing.T) {
 		got := big.NewInt(0)
 		gotAbs := big.NewInt(0)

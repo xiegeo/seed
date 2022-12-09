@@ -8,9 +8,9 @@ require (
 	github.com/mattn/go-sqlite3 v1.14.16
 	github.com/porfirion/trie v0.0.1
 	github.com/puzpuzpuz/xsync/v2 v2.4.0
-	github.com/shopspring/decimal v1.3.1
 	github.com/stretchr/testify v1.8.1
 	github.com/wk8/go-ordered-map/v2 v2.0.0
+	github.com/xiegeo/must v0.0.0-20221208190921-9e27190513f9
 	golang.org/x/exp v0.0.0-20221126150942-6ab00d035af9
 	golang.org/x/text v0.4.0
 )
