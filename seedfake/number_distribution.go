@@ -31,7 +31,7 @@ func Bool(d Int32Distribution) bool {
 func RangeByteLength(d NumberDistribution, min, max int64) []byte {
 	length := d.RangeInt64(min, max)
 	bs := make([]byte, length)
-	d.Read(bs)
+	_, _ = must.B2(d.Read(bs))(len(bs), nil)
 	return bs
 }
 

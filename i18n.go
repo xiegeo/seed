@@ -11,8 +11,34 @@ import (
 // I18n[T any] is used for internationalization, such as text and icons displayed to users.
 type I18n[T any] map[language.Tag]T
 
+var _ I18nGetter[any] = I18n[any]{}
+
+type I18nGetter[T any] interface {
+	GetValue(p *Picker, fallback T) T
+	Count() int
+	RangeAll(func(language.Tag, T))
+}
+
+func NewI18n[T any](from I18nGetter[T]) I18n[T] {
+	out := make(I18n[T], from.Count())
+	from.RangeAll(func(k language.Tag, v T) {
+		out[k] = v
+	})
+	return out
+}
+
+func (n I18n[T]) Count() int {
+	return len(n)
+}
+
+func (n I18n[T]) RangeAll(f func(language.Tag, T)) {
+	for k, v := range n {
+		f(k, v)
+	}
+}
+
 func (n I18n[T]) GetValue(p *Picker, fallback T) T {
-	lang, _ := Pick(p, n)
+	lang, _ := Pick[T](p, n)
 	v, ok := n[lang]
 	if ok {
 		return v
@@ -89,16 +115,16 @@ func (p pickOrder) betterThen(p2 pickOrder) bool {
 
 // Pick picks the best value from I18n by the picker's preference.
 // If no languages matched, then (und, false) is returned.
-func Pick[T any](picker *Picker, values I18n[T]) (language.Tag, bool) {
+func Pick[T any](picker *Picker, values I18nGetter[T]) (language.Tag, bool) {
 	var bestTag language.Tag
 	var bestOrder pickOrder
-	for tag := range values {
+	values.RangeAll(func(tag language.Tag, v T) {
 		order := picker.getOrder(tag)
 		if order.betterThen(bestOrder) {
 			bestTag = tag
 			bestOrder = order
 		}
-	}
+	})
 	if picker.fallback != nil && bestOrder.confidence == language.No {
 		return Pick(picker.fallback, values)
 	}

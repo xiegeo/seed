@@ -3,68 +3,84 @@ package sqldb
 import (
 	"context"
 
-	orderedmap "github.com/wk8/go-ordered-map/v2"
-
 	"github.com/xiegeo/must"
+
 	"github.com/xiegeo/seed"
+	"github.com/xiegeo/seed/dictionary"
 	"github.com/xiegeo/seed/seederrors"
 )
 
 type domainInfo struct {
 	seed.Thing
-	objectMap map[seed.CodeName]*objectInfo
+	objectMap *dictionary.SelfKeyed[seed.CodeName, *objectInfo]
 }
 
-func (db *DB) domainInfoFromDomain(ctx context.Context, d *seed.Domain) (domainInfo, error) {
-	objectMap := make(map[seed.CodeName]*objectInfo, d.Objects.Count())
-	err := d.Objects.RangeLogical(func(cn seed.CodeName, ob *seed.Object) (err error) {
+func (db *DB) domainInfoFromDomain(ctx context.Context, d seed.DomainGetter) (*domainInfo, error) {
+	objectMap, err := seed.NewObjects[*objectInfo]()
+	if err != nil {
+		return nil, err
+	}
+	err = d.GetObjects().RangeLogical(func(cn seed.CodeName, ob seed.ObjectGetter) (err error) {
 		// the exact ordering does not mater, range deterministically to ease debugging.
-		objectMap[ob.Name], err = db.objectInfoFromObject(ctx, d, ob)
-		return err
+		obInfo, err := db.objectInfoFromObject(ctx, d, ob)
+		if err != nil {
+			return err
+		}
+		return objectMap.Add(cn, obInfo)
 	})
 	if err != nil {
-		return domainInfo{}, err
+		return nil, err
 	}
-	return domainInfo{
-		Thing:     d.Thing,
+	return &domainInfo{
+		Thing:     seed.NewThing(d),
 		objectMap: objectMap,
 	}, nil
 }
 
-type objectInfo struct {
-	seed.Thing
-	fields       *orderedmap.OrderedMap[seed.CodeName, *fieldInfo]
-	mainTable    Table
-	helperTables map[string]Table
+func (d *domainInfo) GetObjects() dictionary.Getter[seed.CodeName, seed.ObjectGetter] {
+	return dictionary.MapValue[seed.CodeName, *objectInfo](d.objectMap, func(ob *objectInfo) seed.ObjectGetter {
+		return ob
+	})
 }
 
-func (db *DB) objectInfoFromObject(ctx context.Context, d *seed.Domain, ob *seed.Object) (*objectInfo, error) {
+type objectInfo struct {
+	seed.Thing
+	fields       *dictionary.SelfKeyed[seed.CodeName, *fieldInfo]
+	mainTable    Table
+	helperTables map[string]Table
+
+	identities []seed.Identity
+	ranges     []seed.Range
+}
+
+func (db *DB) objectInfoFromObject(ctx context.Context, d seed.DomainGetter, ob seed.ObjectGetter) (*objectInfo, error) {
 	tableName, err := db.generateTableName(ctx, d, ob)
 	if err != nil {
 		return nil, err
 	}
-	fields := orderedmap.New[seed.CodeName, *fieldInfo]()
+	fields := seed.NewFields0[*fieldInfo]()
+
 	table := InitTable(tableName)
 	table.Option = db.option.TableOption
 	helpers := make(map[string]Table)
-	err = ob.Fields.RangeLogical(func(cn seed.CodeName, f *seed.Field) error {
+	err = ob.GetFields().RangeLogical(func(cn seed.CodeName, f *seed.Field) error {
 		info, err := db.generateFieldInfo(f) //nolint:govet // shadow: declaration of "err"
 		if err != nil {
 			return err
 		}
-		_, present := fields.Set(f.Name, info)
-		if present {
-			return seederrors.NewSystemError(`field with name="%s" inserted again, this should never happen`, f.Name)
+		err = fields.Add(f.GetName(), info)
+		if err != nil {
+			return seederrors.NewSystemError("error adding field that was already checked: %w", err)
 		}
 		for _, col := range info.cols {
-			_, present = table.Columns.Set(col.Name, col)
+			_, present := table.Columns.Set(col.Name, col)
 			if present {
 				return seederrors.NewSystemError(`column with name="%s" inserted again, this should never happen`, col.Name)
 			}
 		}
 		table.Constraint.Checks = append(table.Constraint.Checks, info.checks...)
 		for _, helper := range info.tables {
-			_, present = helpers[helper.Name]
+			_, present := helpers[helper.Name]
 			if present {
 				return seederrors.NewSystemError(`table with name="%s" inserted again, this should never happen`, helper.Name)
 			}
@@ -77,16 +93,30 @@ func (db *DB) objectInfoFromObject(ctx context.Context, d *seed.Domain, ob *seed
 	}
 	table.Constraint.Checks = append(table.Constraint.Checks, getRangeChecks(ob)...)
 	return &objectInfo{
-		Thing:        ob.Thing,
+		Thing:        seed.NewThing(ob),
 		fields:       fields,
 		mainTable:    table,
 		helperTables: helpers,
 	}, nil
 }
 
-func getRangeChecks(ob *seed.Object) []Expression {
+func (ob *objectInfo) GetFields() dictionary.Getter[seed.CodeName, *seed.Field] {
+	return dictionary.MapValue[seed.CodeName, *fieldInfo, *seed.Field](ob.fields, func(f *fieldInfo) *seed.Field {
+		return &f.Field
+	})
+}
+
+func (ob *objectInfo) GetIdentities() []seed.Identity {
+	return ob.identities
+}
+
+func (ob *objectInfo) GetRanges() []seed.Range {
+	return ob.ranges
+}
+
+func getRangeChecks(ob seed.ObjectGetter) []Expression {
 	var exps []Expression
-	must.NoError(ob.RangeRanges(func(r seed.Range) error {
+	must.NoError(seed.RangeRanges(ob, func(r seed.Range) error {
 		a := "<"
 		if r.IncludeEndValue {
 			a = "<="

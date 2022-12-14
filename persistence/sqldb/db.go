@@ -14,8 +14,8 @@ type DB struct {
 
 	option *DBOption
 
-	defaultDomain domainInfo
-	domains       map[seed.CodeName]domainInfo
+	defaultDomain *domainInfo
+	domains       map[seed.CodeName]*domainInfo
 }
 
 type DBOption struct {
@@ -34,7 +34,7 @@ func New(sqldb *sql.DB, options ...func(*DBOption) error) (*DB, error) {
 	db := DB{
 		sqldb:   sqldb,
 		option:  newDefaultOption(),
-		domains: make(map[seed.CodeName]domainInfo),
+		domains: make(map[seed.CodeName]*domainInfo),
 	}
 	for _, op := range options {
 		err := op(db.option)
@@ -43,6 +43,10 @@ func New(sqldb *sql.DB, options ...func(*DBOption) error) (*DB, error) {
 		}
 	}
 	return &db, nil
+}
+
+func (db *DB) DefaultDomain() seed.DomainGetter {
+	return db.defaultDomain
 }
 
 var qrx = regexp.MustCompile(`\?`)

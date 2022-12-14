@@ -6,9 +6,9 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/xiegeo/must"
 	"golang.org/x/text/language"
 
-	"github.com/xiegeo/must"
 	"github.com/xiegeo/seed"
 )
 

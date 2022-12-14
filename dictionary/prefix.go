@@ -16,17 +16,6 @@ func makePrefixIndex[V any]() prefixIndex[V] {
 	}
 }
 
-/* unused
-func (p prefixIndex[V]) count() int {
-	return p.internal.Count()
-}
-
-func (p prefixIndex[V]) putCopyKey(k []byte, v V) {
-	k = append(make([]byte, 0, len(k)), k...)
-	p.putFast(k, v)
-}
-*/
-
 func (p prefixIndex[V]) putFast(k []byte, v V) {
 	p.internal.Put(k, v)
 }

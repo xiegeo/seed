@@ -17,14 +17,10 @@ type FieldGroup struct {
 	Ranges     []Range                                 // if any ranges is left out of identities, it can be described here.
 }
 
-// NewFields build a self keyed dictionary for use in FieldGroup.Fields
-func NewFields(fs ...*Field) (*dictionary.SelfKeyed[CodeName, *Field], error) {
-	dict := dictionary.NewSelfKeyed(
-		dictionary.NewField[CodeName, *Field](),
-		func(f *Field) CodeName {
-			return f.Name
-		},
-	)
+// NewFields build a self keyed dictionary with field rules, such as FieldGroup.Fields
+// It errors if values added violate field naming rules.
+func NewFields[T ThingGetter](fs ...T) (*dictionary.SelfKeyed[CodeName, T], error) {
+	dict := NewFields0[T]()
 	err := dict.AddValue(fs...)
 	if err != nil {
 		return nil, err
@@ -32,8 +28,18 @@ func NewFields(fs ...*Field) (*dictionary.SelfKeyed[CodeName, *Field], error) {
 	return dict, nil
 }
 
-func (g *FieldGroup) RangeRanges(f func(r Range) error) error {
-	for _, id := range g.Identities {
+// NewFields0 is the zero argument version of NewFields, it also does not error
+func NewFields0[T ThingGetter]() *dictionary.SelfKeyed[CodeName, T] {
+	return dictionary.NewSelfKeyed(
+		dictionary.NewField[CodeName, T](),
+		func(f T) CodeName {
+			return f.GetName()
+		},
+	)
+}
+
+func RangeRanges(g FieldGroupGetter, f func(r Range) error) error {
+	for _, id := range g.GetIdentities() {
 		for _, r := range id.Ranges {
 			err := f(r)
 			if err != nil {
@@ -41,7 +47,7 @@ func (g *FieldGroup) RangeRanges(f func(r Range) error) error {
 			}
 		}
 	}
-	for _, r := range g.Ranges {
+	for _, r := range g.GetRanges() {
 		err := f(r)
 		if err != nil {
 			return err

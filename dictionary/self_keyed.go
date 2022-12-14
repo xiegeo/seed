@@ -42,6 +42,7 @@ func (d *SelfKeyed[K, V]) NewMap(f func(V) (V, error)) (*SelfKeyed[K, V], error)
 	return dict, nil
 }
 
+// AddValue add values to this dictionary, with each key derived from value
 func (d *SelfKeyed[K, V]) AddValue(vs ...V) error {
 	for _, v := range vs {
 		k := d.key(v)

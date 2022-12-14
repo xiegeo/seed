@@ -2,6 +2,7 @@ package testdomain
 
 import (
 	"github.com/xiegeo/must"
+
 	"github.com/xiegeo/seed"
 )
 
@@ -26,6 +27,7 @@ func ObjLevel0() *seed.Object {
 	}
 }
 
+// ObjLevel0List is all list extension of ObjLevel0
 func ObjLevel0List() *seed.Object {
 	setting := seed.ListSetting{
 		MinLength: 0,

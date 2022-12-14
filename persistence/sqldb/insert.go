@@ -14,7 +14,7 @@ import (
 // InsertObjects insert data keyed by object code name. If value is a slice, it's treated as a list of values.
 // All inserts must be done or none at all.
 func (db *DB) InsertObjects(ctx context.Context, v map[seed.CodeName]any) error {
-	return db.InsertDomainObjects(ctx, &db.defaultDomain, v)
+	return db.InsertDomainObjects(ctx, db.defaultDomain, v)
 }
 
 func (db *DB) InsertDomainObjects(ctx context.Context, domain *domainInfo, v map[seed.CodeName]any) error {
@@ -95,7 +95,7 @@ func (b *batchTables) getTableRows(obInfo *objectInfo) batchRows {
 }
 
 func (b *batchTables) appendData(objectName seed.CodeName, data any) error {
-	obInfo, ok := b.domain.objectMap[objectName]
+	obInfo, ok := b.domain.objectMap.Get(objectName)
 	if !ok {
 		return seederrors.NewObjectNotFoundError(objectName)
 	}
@@ -138,22 +138,25 @@ func (b *batchTables) appendValue(obInfo *objectInfo, dataValue reflect.Value) e
 func appendMapValue[K ~string](b *batchTables, obInfo *objectInfo, m map[K]any) error {
 	table := b.getTableRows(obInfo)
 	row := make([]any, 0, len(table.columnIndexes))
-	for current := obInfo.fields.Oldest(); current != nil; current = current.Next() {
-		fieldName := current.Key
+	err := obInfo.fields.RangeLogical(func(fieldName seed.CodeName, fi *fieldInfo) error {
 		fieldValue := m[K(fieldName)]
-		valueColumns := current.Value.cols
+		valueColumns := fi.cols
 		if isNilPointer(fieldValue) {
-			if current.Value.Nullable {
+			if fi.Nullable {
 				row = append(row, make([]any, len(valueColumns))...) // fill the columns of this value with nils
-				continue
+				return nil
 			}
 			return seederrors.NewValueRequiredError(fieldName)
 		}
-		values, err := current.Value.Encoder()(fieldValue)
+		values, err := fi.Encoder()(fieldValue)
 		if err != nil {
 			return err
 		}
 		row = append(row, values...)
+		return nil
+	})
+	if err != nil {
+		return err
 	}
 	if len(row) != len(table.columnIndexes) {
 		return seederrors.NewSystemError("can not set %d values to %d columns", len(row), len(table.columnIndexes))

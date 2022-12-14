@@ -1,6 +1,16 @@
+// dictionary implements a collection to hold field and object definitions
+// and checks CodeName character and namespace rules.
+//
+// Simplify is the simplifying algorithm used to avoid confusing names.
+//
+// NewField and NewObject creates a dictionaries for a list of fields or object with their namespace rules.
+//
+// SelfKeyed is a wrapper that provide convinces for using dictionary
+// as collection of values instead of key-value pairs.
 package dictionary
 
 import (
+	"github.com/xiegeo/must"
 	"golang.org/x/exp/constraints"
 
 	"github.com/xiegeo/seed/seederrors"
@@ -123,6 +133,27 @@ func (d *Dictionary[K, V]) Add(k K, v V) error {
 		return seederrors.NewNameRepeatedError(getLastValue(shorterName), k)
 	}
 	return d.set(k, v, simple, version)
+}
+
+// private to satisfy DictionaryGetter
+//
+//nolint:unused
+func (*Dictionary[K, V]) private() {}
+
+// Values returns all values from dictionary
+func (d *Dictionary[K, V]) Values() []V {
+	return Values(d.RangeLogical, d.Count())
+}
+
+// Values collects values from Range* callback and returns a slice of all values.
+// sizeHint is the minimum capacity of returned slice.
+func Values[K, V any](callback func(f func(K, V) error) error, sizeHint int) []V {
+	vs := make([]V, 0, sizeHint)
+	must.NoError(callback(func(k K, v V) error {
+		vs = append(vs, v)
+		return nil
+	}))
+	return vs
 }
 
 func getSliceValue[I constraints.Integer, V any](i I, s []V) V {

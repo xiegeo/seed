@@ -10,9 +10,9 @@ import (
 )
 
 // AddDomain adds the domain and readies the database to serve this domain.
-func (db *DB) AddDomain(ctx context.Context, d *seed.Domain) error {
-	if _, ok := db.domains[d.Name]; ok {
-		return seederrors.NewCodeNameExistsError(d.Name, seederrors.ThingTypeDomain, "")
+func (db *DB) AddDomain(ctx context.Context, d seed.DomainGetter) error {
+	if _, ok := db.domains[d.GetName()]; ok {
+		return seederrors.NewCodeNameExistsError(d.GetName(), seederrors.ThingTypeDomain, "")
 	}
 	domainInfo, err := db.domainInfoFromDomain(ctx, d)
 	if err != nil {
@@ -24,29 +24,29 @@ func (db *DB) AddDomain(ctx context.Context, d *seed.Domain) error {
 	if err != nil {
 		return err
 	}
-	if db.defaultDomain.Name == "" {
+	if db.defaultDomain == nil {
 		db.defaultDomain = domainInfo // the first domain added is the default domain
 	}
-	db.domains[d.Name] = domainInfo
+	db.domains[d.GetName()] = domainInfo
 	return nil
 }
 
-func (db *DB) generateTableName(ctx context.Context, d *seed.Domain, ob *seed.Object) (string, error) {
+func (db *DB) generateTableName(ctx context.Context, d seed.DomainGetter, ob seed.ObjectGetter) (string, error) {
 	err := ctx.Err() // hide unparam lint for future usage
 	if err != nil {
 		return "", err
 	}
-	return fmt.Sprintf("%s_ob_%s", d.Name, ob.Name), nil
+	return fmt.Sprintf("%s_ob_%s", d.GetName(), ob.GetName()), nil
 }
 
-func createDomainTx(txc txContext, domain domainInfo) error {
-	for _, obj := range domain.objectMap {
+func createDomainTx(txc txContext, domain *domainInfo) error {
+	return domain.objectMap.RangeLogical(func(cn seed.CodeName, obj *objectInfo) error {
 		err := createObjectTx(txc, obj)
 		if err != nil {
 			return seederrors.WithMessagef(err, "in object %s", obj.Name)
 		}
-	}
-	return nil
+		return nil
+	})
 }
 
 func createObjectTx(txc txContext, obj *objectInfo) error {

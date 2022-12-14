@@ -24,13 +24,7 @@ type Domain struct {
 }
 
 func NewDomain(thing Thing, objs ...*Object) (*Domain, error) {
-	dict := dictionary.NewSelfKeyed(
-		dictionary.NewObject[CodeName, *Object](),
-		func(ob *Object) CodeName {
-			return ob.Name
-		},
-	)
-	err := dict.AddValue(objs...)
+	dict, err := NewObjects(objs...)
 	if err != nil {
 		return nil, err
 	}
@@ -38,4 +32,23 @@ func NewDomain(thing Thing, objs ...*Object) (*Domain, error) {
 		Thing:   thing,
 		Objects: dict,
 	}, nil
+}
+
+func NewObjects[T ObjectGetter](objs ...T) (*dictionary.SelfKeyed[CodeName, T], error) {
+	dict := NewObjects0[T]()
+	err := dict.AddValue(objs...)
+	if err != nil {
+		return nil, err
+	}
+	return dict, nil
+}
+
+// NewObjects0 is the zero argument version of NewObjects, it also does not error
+func NewObjects0[T ThingGetter]() *dictionary.SelfKeyed[CodeName, T] {
+	return dictionary.NewSelfKeyed(
+		dictionary.NewObject[CodeName, T](),
+		func(ob T) CodeName {
+			return ob.GetName()
+		},
+	)
 }
