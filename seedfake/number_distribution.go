@@ -2,14 +2,12 @@ package seedfake
 
 import (
 	crand "crypto/rand"
-	"fmt"
 	"io"
 	"math"
 	"math/big"
 	"math/rand"
 
 	"github.com/xiegeo/must"
-	"golang.org/x/exp/constraints"
 )
 
 type NumberDistribution interface {
@@ -195,6 +193,7 @@ func NewMixedDistribution(pickBy *rand.Rand, dists []NumberDistribution, weights
 	}
 }
 
+// NewMinMaxFlat create a mixed distribution given weights for min, max and flat generators
 func NewMinMaxFlat(s rand.Source, min, max, flat float64) *Mixed {
 	return NewMixedDistribution(rand.New(s),
 		[]NumberDistribution{Min{}, Max{}, NewFlat(s)},
@@ -231,18 +230,12 @@ func (m *Mixed) RangeFloat64(min, max float64) float64 {
 	return m.pickDistribution().RangeFloat64(min, max)
 }
 
-func mustNotNeg[V constraints.Signed | constraints.Float](v V) {
-	if v < 0 {
-		panic(fmt.Sprintf("negative value %v of %T", v, v))
-	}
-}
-
 // sumNoOverflow returns the sum of ss. If sum of ss overflows to infinity, ss is scaled down
-// so that sum does not overflow.
+// so that sum does not overflow. It panics if any input is infinity or <0.
 func sumNoOverflow(ss ...float64) (float64, []float64) {
 	var largest float64
 	for _, s := range ss {
-		mustNotNeg(s)
+		must.True(s >= 0)
 		if s > largest {
 			largest = s
 			must.False(math.IsInf(s, 0), "infinity will always overflow")
