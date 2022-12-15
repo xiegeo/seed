@@ -101,7 +101,7 @@ func (db *DB) objectInfoFromObject(ctx context.Context, d seed.DomainGetter, ob 
 }
 
 func (ob *objectInfo) GetFields() dictionary.Getter[seed.CodeName, *seed.Field] {
-	return dictionary.MapValue[seed.CodeName, *fieldInfo, *seed.Field](ob.fields, func(f *fieldInfo) *seed.Field {
+	return dictionary.MapValue[seed.CodeName, *fieldInfo](ob.fields, func(f *fieldInfo) *seed.Field {
 		return &f.Field
 	})
 }

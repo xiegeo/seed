@@ -51,11 +51,11 @@ func TestAddDomain(t *testing.T) {
 	added := 0
 	for i := 100; i > 0; i-- {
 		err = db.InsertObjects(ctx, map[seed.CodeName]any{
-			Event().Name: must.V(gen.ValuesForObject(Event(), 1)),
+			Event().Name: must.VT(gen.ValuesForObject(Event(), 1))(t),
 		})
 		if err == nil {
 			added++
 		}
 	}
-	assert.Equal(t, 46, added)
+	assert.Equal(t, 94, added)
 }

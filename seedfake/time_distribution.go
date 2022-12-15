@@ -8,7 +8,8 @@ import (
 )
 
 type TimeDistribution interface {
-	RangeTime(min, max time.Time, scale time.Duration) time.Time
+	Zone() *time.Location
+	RangeTime(min, max time.Time, scale time.Duration, withZone bool) time.Time
 }
 
 type Time struct {
@@ -32,6 +33,13 @@ func (t *Time) Zone() *time.Location {
 	return time.FixedZone(fmt.Sprintf("%+02d:%02d", offsetMinutes/60, abs(offsetMinutes%60)), offsetMinutes*60)
 }
 
+func (t *Time) WithZone(timeStamp time.Time, withZone bool) time.Time {
+	if withZone {
+		return timeStamp.In(t.Zone())
+	}
+	return timeStamp.UTC()
+}
+
 func abs(v int) int {
 	if v < 0 {
 		return -v
@@ -39,15 +47,15 @@ func abs(v int) int {
 	return v
 }
 
-func (t *Time) RangeTime(min, max time.Time, scale time.Duration) time.Time {
+func (t *Time) RangeTime(min, max time.Time, scale time.Duration, withZone bool) time.Time {
 	diff := max.Sub(min)
 	if diff != math.MaxInt64 {
 		addition := t.dist.RangeInt64(0, int64(diff/scale)) * int64(scale)
-		return min.Add(time.Duration(addition)).In(t.Zone())
+		return t.WithZone(min.Add(time.Duration(addition)), withZone)
 	}
 	bigIntMin := timeToBigInt(min, scale)
 	target := t.dist.RangeBigInt(bigIntMin, timeToBigInt(max, scale))
-	return bigIntToTime(target, scale).In(t.Zone())
+	return t.WithZone(bigIntToTime(target, scale), withZone)
 }
 
 func timeToBigInt(t time.Time, scale time.Duration) *big.Int {

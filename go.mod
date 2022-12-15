@@ -10,7 +10,7 @@ require (
 	github.com/puzpuzpuz/xsync/v2 v2.4.0
 	github.com/stretchr/testify v1.8.1
 	github.com/wk8/go-ordered-map/v2 v2.1.5
-	github.com/xiegeo/must v0.0.1
+	github.com/xiegeo/must v0.0.2-0.20221215091440-60fce374ce03
 	golang.org/x/exp v0.0.0-20221212164502-fae10dda9338
 	golang.org/x/text v0.5.0
 )
