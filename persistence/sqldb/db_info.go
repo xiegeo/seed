@@ -91,6 +91,7 @@ func (db *DB) objectInfoFromObject(ctx context.Context, d seed.DomainGetter, ob 
 	if err != nil {
 		return nil, err
 	}
+	table.Constraint.Uniques = append(table.Constraint.Uniques, getIdentityChecks(ob)...)
 	table.Constraint.Checks = append(table.Constraint.Checks, getRangeChecks(ob)...)
 	return &objectInfo{
 		Thing:        seed.NewThing(ob),
@@ -134,6 +135,22 @@ func getRangeChecks(ob seed.ObjectGetter) []Expression {
 		return nil
 	}))
 	return exps
+}
+
+func getIdentityChecks(ob seed.ObjectGetter) [][]string {
+	uniques := make([][]string, 0, len(ob.GetIdentities()))
+	for _, ids := range ob.GetIdentities() {
+		keys := make([]string, 0, len(ids.Fields)+len(ids.Ranges))
+		for _, id := range ids.Fields {
+			keys = append(keys, string(id))
+		}
+		for _, r := range ids.Ranges {
+			keys = append(keys, string(r.Start))
+		}
+		must.True(len(keys) > 0, "an identity without any columns listed")
+		uniques = append(uniques, keys)
+	}
+	return uniques
 }
 
 type fieldInfo struct {

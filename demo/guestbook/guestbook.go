@@ -55,7 +55,7 @@ func Event() *seed.Object {
 				// EventDescriptionField(), // todo:i18n
 			)),
 			Identities: []seed.Identity{{
-				Fields: []seed.CodeName{EventNameField().Name},
+				Fields: []seed.CodeName{StartTimeField().Name},
 			}},
 			Ranges: []seed.Range{{
 				Start:           StartTimeField().Name,

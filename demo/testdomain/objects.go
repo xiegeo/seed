@@ -27,6 +27,17 @@ func ObjLevel0() *seed.Object {
 	}
 }
 
+func ObjLevel0Identities() *seed.Object {
+	ob := ObjLevel0()
+	ob.Name += "_ids"
+	ob.Identities = append(ob.Identities, seed.Identity{
+		Fields: []seed.CodeName{Bytes().Name, Bool().Name},
+	}, seed.Identity{
+		Fields: []seed.CodeName{DateTimeSec().Name, JSInteger().Name},
+	})
+	return ob
+}
+
 // ObjLevel0List is all list extension of ObjLevel0
 func ObjLevel0List() *seed.Object {
 	setting := seed.ListSetting{

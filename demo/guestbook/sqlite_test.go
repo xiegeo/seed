@@ -57,5 +57,5 @@ func TestAddDomain(t *testing.T) {
 			added++
 		}
 	}
-	assert.Equal(t, 94, added)
+	assert.Equal(t, 64, added)
 }

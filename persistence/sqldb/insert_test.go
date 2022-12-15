@@ -6,6 +6,7 @@ import (
 	"math/rand"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/xiegeo/must"
 
@@ -30,9 +31,15 @@ func TestInsertsSqlite3(t *testing.T) {
 	require.NoError(t, err)
 
 	domain := testdomain.DomainLevel0base()
+	require.NoError(t, domain.Objects.AddValue(testdomain.ObjLevel0Identities()))
+	// require.NoError(t, domain.Objects.AddValue(testdomain.ObjLevel0List()))
 	msg := "sub test is required to succeed"
 	require.True(t, testAddDomain(t, ctx, db, domain), msg)
-	require.True(t, testInserts(t, ctx, db), msg)
+	counter := successCounter{
+		"TestInsertsSqlite3/inserts_test_level_0_base/level_0":     85,
+		"TestInsertsSqlite3/inserts_test_level_0_base/level_0_ids": 58,
+	}
+	require.True(t, testInserts(t, ctx, db, counter), msg)
 }
 
 func testAddDomain(t *testing.T, ctx context.Context, db *sqldb.DB, domain seed.DomainGetter) (success bool) {
@@ -43,30 +50,36 @@ func testAddDomain(t *testing.T, ctx context.Context, db *sqldb.DB, domain seed.
 	return success
 }
 
-func testInserts(t *testing.T, ctx context.Context, db *sqldb.DB) (success bool) {
+type successCounter map[string]int
+
+func testInserts(t *testing.T, ctx context.Context, db *sqldb.DB, counter successCounter) (success bool) {
+	success = true
 	domain := db.DefaultDomain()
 	t.Run("inserts "+string(domain.GetName()), func(t *testing.T) {
-		gen := seedfake.NewValueGen(seedfake.NewMinMaxFlat(rand.NewSource(0), 1, 1, 3))
+		gen := seedfake.NewValueGen(seedfake.NewMinMaxFlat(rand.NewSource(0), 1, 1, 5))
 		require.NoError(t, domain.GetObjects().RangeLogical(func(obName seed.CodeName, ob seed.ObjectGetter) error {
-			var errs []error
-			total := 100
-			for i := total; i > 0; i-- {
-				err := db.InsertObjects(ctx, map[seed.CodeName]any{
-					obName: must.VT(gen.ValuesForObject(ob, 1))(t),
-				})
-				if err != nil {
-					errs = append(errs, err)
+			t.Run(string(obName), func(t *testing.T) {
+				var errs []error
+				total := 100
+				for i := total; i > 0; i-- {
+					err := db.InsertObjects(ctx, map[seed.CodeName]any{
+						obName: must.VT(gen.ValuesForObject(ob, 1))(t),
+					})
+					if err != nil {
+						errs = append(errs, err)
+					}
 				}
-			}
-			added := total - len(errs)
-			if added < 20 {
-				t.Errorf("not enough rows inserted for %s, successes=%d, errors=%v", obName, added, errs)
-			} else {
-				t.Logf("added %s:%d", obName, added)
-			}
+				added := total - len(errs)
+				if added < 50 { // allow some rows to fail quietly on random data because of constraints
+					success = false
+					t.Errorf("not enough rows inserted for %s, successes=%d, errors=%v", obName, added, errs)
+				} else {
+					t.Logf("added %s:%d", obName, added)
+				}
+				assert.Equal(t, counter[t.Name()], added, "successes not eq")
+			})
 			return nil
 		}))
-		success = true
 	})
 	return success
 }
