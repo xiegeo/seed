@@ -234,10 +234,10 @@ type OnAction string
 
 const (
 	OnActionNoAction   OnAction = "NO ACTION"
-	OnActionRestrict            = "RESTRICT"
-	OnActionSetNull             = "SET NULL"
-	OnActionSetDefault          = "SET DEFAULT"
-	OnActionCascade             = "CASCADE"
+	OnActionRestrict   OnAction = "RESTRICT"
+	OnActionSetNull    OnAction = "SET NULL"
+	OnActionSetDefault OnAction = "SET DEFAULT"
+	OnActionCascade    OnAction = "CASCADE"
 )
 
 func (fk ForeignKey[T]) writeTo(w *writeWarpper) {

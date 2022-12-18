@@ -1,8 +1,6 @@
 package sqldb
 
 import (
-	"context"
-
 	"github.com/xiegeo/must"
 
 	"github.com/xiegeo/seed"
@@ -15,7 +13,7 @@ type domainInfo struct {
 	objectMap *dictionary.SelfKeyed[seed.CodeName, *objectInfo]
 }
 
-func (db *DB) domainInfoFromDomain(ctx context.Context, d seed.DomainGetter) (*domainInfo, error) {
+func (db *DB) domainInfoFromDomain(d seed.DomainGetter) (*domainInfo, error) {
 	objectMap, err := seed.NewObjects[*objectInfo]()
 	if err != nil {
 		return nil, err

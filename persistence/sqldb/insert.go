@@ -55,8 +55,8 @@ type batchTables struct {
 }
 
 type batchRows struct {
-	columnIndexes map[string]int
-	rows          [][]any // [rows][cols]value
+	columnIndexes map[string]int // list of column names
+	rows          [][]any        // [rows][cols/tables]value
 }
 
 func (b *batchRows) insertRowStmt(txc txContext, tableName string, q func(string) string) (*sql.Stmt, error) {
@@ -87,8 +87,8 @@ func newBatchTables(domain *domainInfo) *batchTables {
 }
 
 func (b *batchTables) getTableRows(obInfo *objectInfo) batchRows {
-	rowValues := b.tables[obInfo.mainTable.TableName()]
-	if len(rowValues.columnIndexes) == 0 {
+	rowValues, ok := b.tables[obInfo.mainTable.TableName()]
+	if !ok {
 		rowValues.columnIndexes = obInfo.mainTable.ColumnIndexes()
 	}
 	return rowValues

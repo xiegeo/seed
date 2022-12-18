@@ -3,6 +3,7 @@ package sqldb_test
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"math/rand"
 	"testing"
 
@@ -36,8 +37,9 @@ func TestInsertsSqlite3(t *testing.T) {
 	msg := "sub test is required to succeed"
 	require.True(t, testAddDomain(t, ctx, db, domain), msg)
 	counter := successCounter{
-		"TestInsertsSqlite3/inserts_test_level_0_base/level_0":     85,
-		"TestInsertsSqlite3/inserts_test_level_0_base/level_0_ids": 58,
+		"TestInsertsSqlite3/inserts_test_level_0_base/level_0":      85,
+		"TestInsertsSqlite3/inserts_test_level_0_base/level_0_ids":  58,
+		"TestInsertsSqlite3/inserts_test_level_0_base/level_0_list": 0, // not supported yet
 	}
 	require.True(t, testInserts(t, ctx, db, counter), msg)
 }
@@ -70,16 +72,24 @@ func testInserts(t *testing.T, ctx context.Context, db *sqldb.DB, counter succes
 					}
 				}
 				added := total - len(errs)
-				if added < 50 { // allow some rows to fail quietly on random data because of constraints
-					success = false
-					t.Errorf("not enough rows inserted for %s, successes=%d, errors=%v", obName, added, errs)
+				if assert.Equal(t, counter[t.Name()], added, "successes not eq") { // allow some rows to fail quietly on random data because of constraints
+					t.Logf("added %s:%d expected map[error:count]=%v", obName, added, countedStringSet(errs))
 				} else {
-					t.Logf("added %s:%d", obName, added)
+					success = false
+					t.Errorf("not enough rows inserted for %s, expected=%d successes=%d, map[error:count]=%v", obName, counter[t.Name()], added, countedStringSet(errs))
 				}
-				assert.Equal(t, counter[t.Name()], added, "successes not eq")
 			})
 			return nil
 		}))
 	})
 	return success
+}
+
+func countedStringSet[T any](vs []T) map[string]int {
+	out := make(map[string]int)
+	for _, v := range vs {
+		s := fmt.Sprint(v)
+		out[s]++
+	}
+	return out
 }

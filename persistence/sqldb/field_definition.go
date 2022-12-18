@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/xiegeo/must"
+
 	"github.com/xiegeo/seed"
 	"github.com/xiegeo/seed/seederrors"
 )
@@ -200,14 +201,17 @@ func (builder *fieldInfoBuilder) timeStampFailback(f *seed.Field, setting seed.T
 		return nil, err
 	}
 	timeZoneOffset.invertSortColumns = GetColumnNames(timeZoneOffset.cols)
+	return timeStampFailback(utcTime, timeZoneOffset), nil
+}
 
+func timeStampFailback(utcTime, timeZoneOffset *fieldInfo) *fieldInfo {
 	encodeUTC := utcTime.Encoder()
 	encodeOffset := timeZoneOffset.Encoder()
 	decodeUTC := utcTime.Decoder()
 	decodeOffset := timeZoneOffset.Decoder()
-	fieldDefinition := utcTime.fieldDefinition.appendNoEq(timeZoneOffset.fieldDefinition) // equal for timestamp ignores time zone
+	fd := utcTime.fieldDefinition.appendNoEq(timeZoneOffset.fieldDefinition) // equal for timestamp ignores time zone
 	return &fieldInfo{
-		fieldDefinition: fieldDefinition,
+		fieldDefinition: fd,
 		encoder: func(v any) ([]any, error) {
 			vt, ok := v.(time.Time)
 			if !ok {
@@ -245,7 +249,7 @@ func (builder *fieldInfoBuilder) timeStampFailback(f *seed.Field, setting seed.T
 			}
 			return utcTyped.In(time.FixedZone("", int(offsetTyped))), nil
 		},
-	}, nil
+	}
 }
 
 func (builder *fieldInfoBuilder) listFieldInfo(f *seed.Field, setting seed.ListSetting) (*fieldInfo, error) {
@@ -254,16 +258,16 @@ func (builder *fieldInfoBuilder) listFieldInfo(f *seed.Field, setting seed.ListS
 	if len(parentPK) == 0 {
 		return nil, seederrors.NewSystemError("parent table must have primary key defined")
 	}
-	fk := ForeignKey[*TableName]{
+	forgeignKey := ForeignKey[*TableName]{
 		Keys:       withPrefix(systemColumnPrefix, parentPK...),
 		TableName:  builder.parent.Name,
 		References: parentPK,
 		OnDelete:   OnActionCascade,
 		OnUpdate:   OnActionCascade,
 	}
-	table.Constraint.ForeignKeys = append(table.Constraint.ForeignKeys, fk)
+	table.Constraint.ForeignKeys = append(table.Constraint.ForeignKeys, forgeignKey)
 	rev := ExternalColumnName("").Revert
-	for _, col := range fk.Keys {
+	for _, col := range forgeignKey.Keys {
 		_, _ = must.B2(table.Columns.Set(rev(col), Column{
 			Name:       col,
 			Constraint: ColumnConstraint{NotNull: true},
@@ -278,9 +282,8 @@ func (builder *fieldInfoBuilder) listFieldInfo(f *seed.Field, setting seed.ListS
 		return nil, seederrors.WithMessagef(err, "listFieldInfo generate list order for %s", f.Name)
 	}
 	localKeys := order.getEqColumns()
-	table.Constraint.PrimaryKeys = append(fk.Keys, localKeys...)
-	localColumns := append(elem.cols, order.cols...)
-	for _, col := range localColumns {
+	table.Constraint.PrimaryKeys = append(forgeignKey.Keys, localKeys...) //nolint:gocritic // append result not assigned to the same slice
+	for _, col := range append(elem.cols, order.cols...) {
 		_, _ = must.B2(table.Columns.Set(rev(col.Name), col))(must.Any, false, "must not over write key")
 	}
 	return &fieldInfo{

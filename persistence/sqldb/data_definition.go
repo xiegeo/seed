@@ -13,7 +13,7 @@ func (db *DB) AddDomain(ctx context.Context, d seed.DomainGetter) error {
 	if _, ok := db.domains[d.GetName()]; ok {
 		return seederrors.NewCodeNameExistsError(d.GetName(), seederrors.ThingTypeDomain, "")
 	}
-	domainInfo, err := db.domainInfoFromDomain(ctx, d)
+	domainInfo, err := db.domainInfoFromDomain(d)
 	if err != nil {
 		return err
 	}
