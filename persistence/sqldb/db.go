@@ -5,6 +5,7 @@ import (
 	"regexp"
 	"strconv"
 
+	"github.com/xiegeo/must"
 	"github.com/xiegeo/seed"
 )
 
@@ -21,13 +22,43 @@ type DB struct {
 type DBOption struct {
 	TranslateStatement func(string) string // translate ? in statements to a format the database understands.
 	ColumnFeatures                         // describes column type support
-	TableOption
+
+	// PrimaryKeys defines the primary keys for a table, it can return one of three value types.
+	//
+	//  - int: the index of identity to use as primary key. (-1 for do not use any)
+	//  - ColumnType: the type definition of auto increment primary key.
+	//    (empty string if auto increment should not be used)
+	//  - error: something went wrong.
+	PrimaryKeys func(ob seed.FieldGroupGetter) (int, ColumnType, error)
+
+	TableOption         string // Default table option
+	TableOptionNoAutoID string // The table option to use in addition if PrimaryKeys does not use auto increment
 }
 
 func newDefaultOption() *DBOption {
 	return &DBOption{
 		TranslateStatement: func(s string) string { return s },
+		PrimaryKeys: func(ob seed.FieldGroupGetter) (int, ColumnType, error) {
+			return -1, "INTEGER", nil
+		},
 	}
+}
+
+func (op *DBOption) getPrimaryKeys(ob seed.FieldGroupGetter) (int, ColumnType, error) {
+	index, columnType, err := op.PrimaryKeys(ob)
+	if err != nil {
+		return -1, "", err
+	}
+	if index >= 0 {
+		id := ob.GetIdentities()[index]
+		for _, fieldName := range id.Fields {
+			field, _ := must.B2(ob.GetFields().Get(fieldName))(must.Any, true)
+			if err = CheckPrimaryKey(field); err != nil {
+				return -1, "", err
+			}
+		}
+	}
+	return index, columnType, err
 }
 
 func New(sqldb *sql.DB, options ...func(*DBOption) error) (*DB, error) {

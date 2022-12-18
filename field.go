@@ -365,4 +365,12 @@ func (s ListSetting) Covers(s2 ListSetting) bool {
 	return true
 }
 
+func (s ListSetting) ItemField(parent *Field) *Field {
+	return &Field{
+		Thing:            parent.Thing,
+		FieldTypeSetting: s.ItemTypeSetting,
+		FieldType:        s.ItemType,
+	}
+}
+
 type CombinationSetting = FieldGroup // Reuse FieldGroup

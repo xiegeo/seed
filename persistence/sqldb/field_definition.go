@@ -4,26 +4,62 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/xiegeo/must"
 	"github.com/xiegeo/seed"
 	"github.com/xiegeo/seed/seederrors"
 )
 
 // fieldDefinition support a seed defined field with 0 to many columns and 0 to many tables.
 type fieldDefinition struct {
+	// sql definitions
 	cols   []Column
 	checks []Expression
-	tables []Table
+	tables []*Table
+
+	// for operations
+	eqColumns         []string // Columns used for field equality check. If empty, defaults to all.
+	sortColumns       []string // Columns and order used for comparisons. If empty, defaults to Column natural order.
+	invertSortColumns []string // Columns that have invers ordering, such as time zone offset.
 }
 
-func (d fieldDefinition) append(d2 fieldDefinition) fieldDefinition {
+// appendNoEq append all definitions except eqColumns
+func (d fieldDefinition) appendNoEq(d2 fieldDefinition) fieldDefinition {
 	d.cols = append(d.cols, d2.cols...)
 	d.checks = append(d.checks, d2.checks...)
 	d.tables = append(d.tables, d2.tables...)
+	d.sortColumns = append(d.sortColumns, d2.sortColumns...)
+	d.invertSortColumns = append(d.invertSortColumns, d2.invertSortColumns...)
+
+	d.eqColumns = d.getEqColumns()
 	return d
 }
 
-func (db *DB) generateFieldInfo(f *seed.Field) (*fieldInfo, error) {
-	fi, err := db.generateFieldInfoSub(f)
+func GetColumnNames(cs []Column) []string {
+	names := make([]string, len(cs))
+	for i, c := range cs {
+		names[i] = c.Name
+	}
+	return names
+}
+
+func (d fieldDefinition) getEqColumns() []string {
+	if len(d.eqColumns) > 0 {
+		return d.eqColumns
+	}
+	return GetColumnNames(d.cols)
+}
+
+func (d fieldDefinition) getSortColumns() []string {
+	if len(d.sortColumns) > 0 {
+		return d.sortColumns
+	}
+	return GetColumnNames(d.cols)
+}
+
+// generateFieldInfo need table to have Name and Constraint.PrimaryKeys set, if any.
+// So that the table can be referenced
+func (builder *fieldInfoBuilder) generateFieldInfo(f *seed.Field) (*fieldInfo, error) {
+	fi, err := builder.generateFieldInfoSub(f)
 	if err != nil {
 		return nil, err
 	}
@@ -32,11 +68,11 @@ func (db *DB) generateFieldInfo(f *seed.Field) (*fieldInfo, error) {
 }
 
 // generateFieldInfoSub is generateFieldInfo without setting the fieldInfo.Field to match input
-func (db *DB) generateFieldInfoSub(f *seed.Field) (*fieldInfo, error) {
+func (builder *fieldInfoBuilder) generateFieldInfoSub(f *seed.Field) (*fieldInfo, error) {
 	if f.IsI18n {
 		return nil, seederrors.NewFieldNotSupportedError(f.FieldType.String(), f.Name, "IsI18n")
 	}
-	col, found := db.option.ColumnFeatures.Match(f)
+	col, found := builder.db.option.ColumnFeatures.Match(f)
 	if found {
 		fd, err := col.fieldDefinition(f)
 		return &fieldInfo{
@@ -46,11 +82,13 @@ func (db *DB) generateFieldInfoSub(f *seed.Field) (*fieldInfo, error) {
 	}
 	switch setting := f.FieldTypeSetting.(type) {
 	case seed.BooleanSetting:
-		fd, err := db.generateFieldInfoSub(boolAsIntegerField(f))
+		fd, err := builder.generateFieldInfoSub(boolAsIntegerField(f))
 		fd.Field = *f // return the original boolean field, sql supports casting bool to 0 and 1
 		return fd, err
 	case seed.TimeStampSetting:
-		return db.timeStampFailback(f, setting)
+		return builder.timeStampFailback(f, setting)
+	case seed.ListSetting:
+		return builder.listFieldInfo(f, setting)
 	case nil:
 		return nil, seederrors.NewSystemError("FieldTypeSetting not set in field %s", f.Name)
 	}
@@ -117,7 +155,7 @@ func utcTimeStringFuncForLayout(layout string) func(any) (any, error) {
 	}
 }
 
-func (db *DB) utcTimeStampFailback(f *seed.Field, setting seed.TimeStampSetting) (*fieldInfo, error) {
+func (builder *fieldInfoBuilder) utcTimeStampFailback(f *seed.Field, setting seed.TimeStampSetting) (*fieldInfo, error) {
 	if !_failbackTimeStampCoverage.Covers(setting) {
 		return nil, seederrors.NewFieldNotSupportedError(f.FieldType.String(), f.Name, "FieldTypeSetting")
 	}
@@ -130,7 +168,7 @@ func (db *DB) utcTimeStampFailback(f *seed.Field, setting seed.TimeStampSetting)
 		MinCodePoints: codePoints,
 		MaxCodePoints: codePoints,
 	}
-	fi, err := db.generateFieldInfoSub(&utcField)
+	fi, err := builder.generateFieldInfoSub(&utcField)
 	if err != nil {
 		return nil, err
 	}
@@ -145,29 +183,31 @@ func (db *DB) utcTimeStampFailback(f *seed.Field, setting seed.TimeStampSetting)
 	return fi, nil
 }
 
-func (db *DB) timeStampFailback(f *seed.Field, setting seed.TimeStampSetting) (*fieldInfo, error) {
+func (builder *fieldInfoBuilder) timeStampFailback(f *seed.Field, setting seed.TimeStampSetting) (*fieldInfo, error) {
 	if !setting.WithTimeZoneOffset {
 		// use strings if time stamp without time zone is not supported natively.
-		return db.utcTimeStampFailback(f, setting)
+		return builder.utcTimeStampFailback(f, setting)
 	}
 	setting.WithTimeZoneOffset = false
 	f2 := *f
 	f2.FieldTypeSetting = setting
-	utcTime, err := db.generateFieldInfoSub(&f2) // don't call utcTimeStampFailback directly because time stamp without time zone could be supported natively.
+	utcTime, err := builder.generateFieldInfoSub(&f2) // don't call utcTimeStampFailback directly because time stamp without time zone could be supported natively.
 	if err != nil {
 		return nil, err
 	}
-	timeZoneOffset, err := db.generateFieldInfoSub(timeZoneOffsetField(f))
+	timeZoneOffset, err := builder.generateFieldInfoSub(timeZoneOffsetField(f))
 	if err != nil {
 		return nil, err
 	}
+	timeZoneOffset.invertSortColumns = GetColumnNames(timeZoneOffset.cols)
 
 	encodeUTC := utcTime.Encoder()
 	encodeOffset := timeZoneOffset.Encoder()
 	decodeUTC := utcTime.Decoder()
 	decodeOffset := timeZoneOffset.Decoder()
+	fieldDefinition := utcTime.fieldDefinition.appendNoEq(timeZoneOffset.fieldDefinition) // equal for timestamp ignores time zone
 	return &fieldInfo{
-		fieldDefinition: utcTime.fieldDefinition.append(timeZoneOffset.fieldDefinition),
+		fieldDefinition: fieldDefinition,
 		encoder: func(v any) ([]any, error) {
 			vt, ok := v.(time.Time)
 			if !ok {
@@ -206,4 +246,68 @@ func (db *DB) timeStampFailback(f *seed.Field, setting seed.TimeStampSetting) (*
 			return utcTyped.In(time.FixedZone("", int(offsetTyped))), nil
 		},
 	}, nil
+}
+
+func (builder *fieldInfoBuilder) listFieldInfo(f *seed.Field, setting seed.ListSetting) (*fieldInfo, error) {
+	table := builder.initHelperTable(f)
+	parentPK := builder.parent.PrimaryKeys()
+	if len(parentPK) == 0 {
+		return nil, seederrors.NewSystemError("parent table must have primary key defined")
+	}
+	fk := ForeignKey[*TableName]{
+		Keys:       withPrefix(systemColumnPrefix, parentPK...),
+		TableName:  builder.parent.Name,
+		References: parentPK,
+		OnDelete:   OnActionCascade,
+		OnUpdate:   OnActionCascade,
+	}
+	table.Constraint.ForeignKeys = append(table.Constraint.ForeignKeys, fk)
+	rev := ExternalColumnName("").Revert
+	for _, col := range fk.Keys {
+		_, _ = must.B2(table.Columns.Set(rev(col), Column{
+			Name:       col,
+			Constraint: ColumnConstraint{NotNull: true},
+		}))(must.Any, false, "must not over write key")
+	}
+	elem, err := builder.generateFieldInfoSub(setting.ItemField(f))
+	if err != nil {
+		return nil, seederrors.WithMessagef(err, "listFieldInfo generate item field for %s", f.Name)
+	}
+	order, err := builder.generateFieldInfoSub(listOrderField(f, setting))
+	if err != nil {
+		return nil, seederrors.WithMessagef(err, "listFieldInfo generate list order for %s", f.Name)
+	}
+	localKeys := order.getEqColumns()
+	table.Constraint.PrimaryKeys = append(fk.Keys, localKeys...)
+	localColumns := append(elem.cols, order.cols...)
+	for _, col := range localColumns {
+		_, _ = must.B2(table.Columns.Set(rev(col.Name), col))(must.Any, false, "must not over write key")
+	}
+	return &fieldInfo{
+		Field: *f,
+		fieldDefinition: fieldDefinition{
+			tables: []*Table{table},
+		},
+	}, nil
+}
+
+func withPrefix[S ~string](prefix S, ss ...S) []S {
+	for i, s := range ss {
+		ss[i] = prefix + s
+	}
+	return ss
+}
+
+// listOrderField describes a _order field using integer.
+func listOrderField(base *seed.Field, setting seed.ListSetting) *seed.Field {
+	return &seed.Field{
+		Thing: seed.Thing{
+			Name: base.Name + systemColumnOrder,
+		},
+		FieldType: seed.Integer,
+		FieldTypeSetting: seed.IntegerSetting{
+			Min: big.NewInt(1),
+			Max: big.NewInt(setting.MaxLength),
+		},
+	}
 }

@@ -32,7 +32,7 @@ func TestInsertsSqlite3(t *testing.T) {
 
 	domain := testdomain.DomainLevel0base()
 	require.NoError(t, domain.Objects.AddValue(testdomain.ObjLevel0Identities()))
-	// require.NoError(t, domain.Objects.AddValue(testdomain.ObjLevel0List()))
+	require.NoError(t, domain.Objects.AddValue(testdomain.ObjLevel0List()))
 	msg := "sub test is required to succeed"
 	require.True(t, testAddDomain(t, ctx, db, domain), msg)
 	counter := successCounter{

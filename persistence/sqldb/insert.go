@@ -87,7 +87,7 @@ func newBatchTables(domain *domainInfo) *batchTables {
 }
 
 func (b *batchTables) getTableRows(obInfo *objectInfo) batchRows {
-	rowValues := b.tables[obInfo.mainTable.Name]
+	rowValues := b.tables[obInfo.mainTable.TableName()]
 	if len(rowValues.columnIndexes) == 0 {
 		rowValues.columnIndexes = obInfo.mainTable.ColumnIndexes()
 	}
@@ -162,7 +162,7 @@ func appendMapValue[K ~string](b *batchTables, obInfo *objectInfo, m map[K]any) 
 		return seederrors.NewSystemError("can not set %d values to %d columns", len(row), len(table.columnIndexes))
 	}
 	table.rows = append(table.rows, row)
-	b.tables[obInfo.mainTable.Name] = table
+	b.tables[obInfo.mainTable.TableName()] = table
 	return nil
 }
 

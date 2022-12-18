@@ -2,7 +2,6 @@ package sqldb
 
 import (
 	"context"
-	"fmt"
 	"strings"
 
 	"github.com/xiegeo/seed"
@@ -31,14 +30,6 @@ func (db *DB) AddDomain(ctx context.Context, d seed.DomainGetter) error {
 	return nil
 }
 
-func (db *DB) generateTableName(ctx context.Context, d seed.DomainGetter, ob seed.ObjectGetter) (string, error) {
-	err := ctx.Err() // hide unparam lint for future usage
-	if err != nil {
-		return "", err
-	}
-	return fmt.Sprintf("%s_ob_%s", d.GetName(), ob.GetName()), nil
-}
-
 func createDomainTx(txc txContext, domain *domainInfo) error {
 	return domain.objectMap.RangeLogical(func(cn seed.CodeName, obj *objectInfo) error {
 		err := createObjectTx(txc, obj)
@@ -63,9 +54,9 @@ func createObjectTx(txc txContext, obj *objectInfo) error {
 	return nil
 }
 
-func createTableTx(txc txContext, table Table) error {
+func createTableTx(txc txContext, table *Table) error {
 	sql := &strings.Builder{}
-	_, err := CreateTable(table).WriteTo(sql)
+	_, err := MakeCreateTable(table).WriteTo(sql)
 	if err != nil {
 		return err
 	}

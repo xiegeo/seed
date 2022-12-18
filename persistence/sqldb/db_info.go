@@ -20,9 +20,10 @@ func (db *DB) domainInfoFromDomain(ctx context.Context, d seed.DomainGetter) (*d
 	if err != nil {
 		return nil, err
 	}
+	builder := db.newObjectInfoBuilder(d)
 	err = d.GetObjects().RangeLogical(func(cn seed.CodeName, ob seed.ObjectGetter) (err error) {
 		// the exact ordering does not mater, range deterministically to ease debugging.
-		obInfo, err := db.objectInfoFromObject(ctx, d, ob)
+		obInfo, err := builder.objectInfoFromObject(ob)
 		if err != nil {
 			return err
 		}
@@ -46,25 +47,47 @@ func (d *domainInfo) GetObjects() dictionary.Getter[seed.CodeName, seed.ObjectGe
 type objectInfo struct {
 	seed.Thing
 	fields       *dictionary.SelfKeyed[seed.CodeName, *fieldInfo]
-	mainTable    Table
-	helperTables map[string]Table
+	mainTable    *Table
+	helperTables map[string]*Table
 
 	identities []seed.Identity
 	ranges     []seed.Range
 }
 
-func (db *DB) objectInfoFromObject(ctx context.Context, d seed.DomainGetter, ob seed.ObjectGetter) (*objectInfo, error) {
-	tableName, err := db.generateTableName(ctx, d, ob)
+type objectInfoBuilder struct {
+	db     *DB
+	domain seed.DomainGetter
+	object seed.ObjectGetter
+}
+
+type fieldInfoBuilder struct {
+	*objectInfoBuilder
+	parent *Table
+}
+
+func (db *DB) newObjectInfoBuilder(d seed.DomainGetter) *objectInfoBuilder {
+	return &objectInfoBuilder{
+		db:     db,
+		domain: d,
+	}
+}
+
+func (builder *objectInfoBuilder) objectInfoFromObject(ob seed.ObjectGetter) (*objectInfo, error) {
+	builder.object = ob
+	fields := seed.NewFields0[*fieldInfo]()
+	table := builder.initTable()
+	err := builder.setTableConstraints(table)
 	if err != nil {
 		return nil, err
 	}
-	fields := seed.NewFields0[*fieldInfo]()
-
-	table := InitTable(tableName)
-	table.Option = db.option.TableOption
-	helpers := make(map[string]Table)
+	childBuilder := &fieldInfoBuilder{
+		objectInfoBuilder: builder,
+		parent:            table,
+	}
+	helpers := make(map[string]*Table)
+	revertColumnName := ExternalColumnName("").Revert
 	err = ob.GetFields().RangeLogical(func(cn seed.CodeName, f *seed.Field) error {
-		info, err := db.generateFieldInfo(f) //nolint:govet // shadow: declaration of "err"
+		info, err := childBuilder.generateFieldInfo(f) //nolint:govet // shadow: declaration of "err"
 		if err != nil {
 			return err
 		}
@@ -73,25 +96,24 @@ func (db *DB) objectInfoFromObject(ctx context.Context, d seed.DomainGetter, ob 
 			return seederrors.NewSystemError("error adding field that was already checked: %w", err)
 		}
 		for _, col := range info.cols {
-			_, present := table.Columns.Set(col.Name, col)
+			_, present := table.Columns.Set(revertColumnName(col.Name), col)
 			if present {
 				return seederrors.NewSystemError(`column with name="%s" inserted again, this should never happen`, col.Name)
 			}
 		}
 		table.Constraint.Checks = append(table.Constraint.Checks, info.checks...)
 		for _, helper := range info.tables {
-			_, present := helpers[helper.Name]
+			_, present := helpers[helper.TableName()]
 			if present {
 				return seederrors.NewSystemError(`table with name="%s" inserted again, this should never happen`, helper.Name)
 			}
-			helpers[helper.Name] = helper
+			helpers[helper.TableName()] = helper
 		}
 		return nil
 	})
 	if err != nil {
 		return nil, err
 	}
-	table.Constraint.Uniques = append(table.Constraint.Uniques, getIdentityChecks(ob)...)
 	table.Constraint.Checks = append(table.Constraint.Checks, getRangeChecks(ob)...)
 	return &objectInfo{
 		Thing:        seed.NewThing(ob),
@@ -99,6 +121,51 @@ func (db *DB) objectInfoFromObject(ctx context.Context, d seed.DomainGetter, ob 
 		mainTable:    table,
 		helperTables: helpers,
 	}, nil
+}
+
+func CheckPrimaryKey(f *seed.Field) error {
+	switch f.FieldTypeSetting.(type) {
+	default:
+		return nil
+	case seed.ListSetting:
+		// system error for now
+		return seederrors.NewSystemError("field %s with setting type %T can not be used as primary key", f.Name, f.FieldTypeSetting)
+	}
+}
+
+func (builder *objectInfoBuilder) setTableConstraints(table *Table) error {
+	table.Option = table.Option.Add(builder.db.option.TableOption)
+	pkIndex, pkColumn, err := builder.db.option.getPrimaryKeys(builder.object)
+	if err != nil {
+		return err
+	}
+	if pkColumn == "" {
+		table.Option = table.Option.Add(builder.db.option.TableOptionNoAutoID)
+		if pkIndex < 0 || pkIndex >= len(builder.object.GetIdentities()) {
+			return seederrors.NewSystemError(
+				"index or column required for PrimaryKeys, got index %d, expected [0,%d)", pkIndex, len(builder.object.GetIdentities()))
+		}
+	} else {
+		_, present := table.Columns.Set(systemColumnID, Column{
+			Name: systemColumnID,
+			Type: pkColumn,
+			Constraint: ColumnConstraint{
+				PrimaryKey: true,
+			},
+		})
+		if present {
+			return seederrors.NewSystemError(`column with name="%s" inserted again, this should never happen`, systemColumnID)
+		}
+		if pkIndex >= 0 {
+			return seederrors.NewSystemError("both index=%d and column given for PrimaryKeys", pkIndex)
+		}
+	}
+	idChecks := getIdentityChecks(builder.object)
+	if pkIndex >= 0 {
+		table.Constraint.PrimaryKeys, idChecks = cutOut(pkIndex, idChecks)
+	}
+	table.Constraint.Uniques = append(table.Constraint.Uniques, idChecks...)
+	return nil
 }
 
 func (ob *objectInfo) GetFields() dictionary.Getter[seed.CodeName, *seed.Field] {
@@ -137,6 +204,10 @@ func getRangeChecks(ob seed.ObjectGetter) []Expression {
 	return exps
 }
 
+func cutOut[V any](i int, v []V) (V, []V) {
+	return v[i], append(v[:i], v[i+1:]...)
+}
+
 func getIdentityChecks(ob seed.ObjectGetter) [][]string {
 	uniques := make([][]string, 0, len(ob.GetIdentities()))
 	for _, ids := range ob.GetIdentities() {
@@ -147,7 +218,7 @@ func getIdentityChecks(ob seed.ObjectGetter) [][]string {
 		for _, r := range ids.Ranges {
 			keys = append(keys, string(r.Start))
 		}
-		must.True(len(keys) > 0, "an identity without any columns listed")
+		must.True(len(keys) > 0, "an identity must have fields listed")
 		uniques = append(uniques, keys)
 	}
 	return uniques

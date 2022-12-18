@@ -6,9 +6,10 @@ import (
 )
 
 // ColumnFeatures describe purposed column types that support each field
-// ordered by preference. If none of the listed column features match, a
-// automatic fail back algorithm is used. For example: integer column for
-// boolean field.
+// ordered by preference, most effect first, most general last.
+// If none of the listed column features match,
+// an automatic fall back algorithm is used.
+// For example: integer column for boolean field.
 type ColumnFeatures [seed.FieldTypeMax][]ColumnFeature
 
 type ColumnFeature struct {
