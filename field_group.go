@@ -11,6 +11,8 @@ type Object struct {
 }
 
 // FieldGroup describe a collection of fields.
+//
+// Identities and Ranges have optional names, which allow them to be referred to if set.
 type FieldGroup struct {
 	Fields     *dictionary.SelfKeyed[CodeName, *Field] // List each fields. The ordering of fields is not relevant for behavior but preserved for implementation details.
 	Identities []Identity                              // required for object definitions and CombinationSetting on fields referred to in parent identity.
@@ -60,13 +62,18 @@ func RangeRanges(g FieldGroupGetter, f func(r Range) error) error {
 // identifying an single instance (a license plate number can ID a car), or
 // uniqueness is required for correct modeling of state (two philosophers can not use the same
 // fork at the same time).
+//
+// All values in Identity.Thing is optional
 type Identity struct {
+	Thing
 	Fields []CodeName
 	Ranges []Range
 }
 
 // Range marks two fields by name as describing a range of values.
 // Start and End must reference two comparable fields of the same type.
+//
+// All values in Range.Thing is optional
 //
 //   - If IncludeEndValue = false, then Start < End. (range must have none zero length)
 //   - If IncludeEndValue = true, then Start <= End.
@@ -84,6 +91,7 @@ type Identity struct {
 // fixed once on the display path. By adding an IncludeEndValue option, the most human friendly
 // interpretation of end value is preserved thought-out.
 type Range struct {
+	Thing
 	Start           CodeName
 	End             CodeName
 	IncludeEndValue bool

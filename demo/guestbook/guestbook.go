@@ -275,7 +275,7 @@ func EventsField() *seed.Field {
 			IsUnique:  true,
 			ItemType:  seed.Reference,
 			ItemTypeSetting: seed.ReferenceSetting{
-				Target: "event",
+				Object: "event",
 			},
 		},
 	}

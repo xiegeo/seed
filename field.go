@@ -321,15 +321,38 @@ func (s RealStandard) Covers(s2 RealStandard) bool {
 	return false
 }
 
+// ReferenceSetting allow one object to refer to an other.
 type ReferenceSetting struct {
-	Target CodeName // target object.
-	// IsWeakReference bool     // If false, the target must exist. If true, the deletion of target sets this reference to null.
+	Object       CodeName         // target object.
+	Identity     CodeName         // target identity or field name (if an identity has just this field)
+	PromotionMap []ReferenceField // Promote selected fields to parent level, if already exist, field settings must match.
+	ReferenceTrackingOption
 }
 
 // Covers returns true if s can support all values in s2.
 func (s ReferenceSetting) Covers(s2 ReferenceSetting) bool {
-	return s.Target == "" || s.Target == s2.Target
+	return false // not sure if there is a use case yet
+	// return s.Target == "" || s.Target == s2.Target
 }
+
+type ReferenceField struct {
+	Local  CodeName
+	Target CodeName
+}
+
+type ReferenceTrackingOption struct {
+	OnUpdate ReferenceTrackingAction
+	OnDelete ReferenceTrackingAction
+}
+
+type ReferenceTrackingAction uint8
+
+const (
+	ActionRestrict ReferenceTrackingAction = iota // This is the default to protect data.
+	ActionCascade                                 // Only supported for OnUpdate.
+	ActionSetNull                                 // Only supported for OnDelete.
+	ActionIgnore                                  // Nothing happens, the reference is only a suggestion.
+)
 
 // ListSetting describes a collection of the same type:
 //
